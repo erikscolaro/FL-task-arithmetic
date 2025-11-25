@@ -1,0 +1,50 @@
+# =====================================================================
+# For a full TOML configuration guide, check the Flower docs:
+# https://flower.ai/docs/framework/how-to-configure-pyproject-toml.html
+# =====================================================================
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fl-task-arithmetic"
+version = "1.0.0"
+description = ""
+license = "Apache-2.0"
+# Dependencies for your Flower App
+dependencies = [
+    "flwr[simulation]>=1.23.0",
+    "flwr-datasets[vision]>=0.5.0",
+    "torch==2.7.1",
+    "torchvision==0.22.1",
+    "wandb>=0.17.8"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.flwr.app]
+publisher = "erik"
+
+# Point to your ServerApp and ClientApp objects
+[tool.flwr.app.components]
+serverapp = "fl_task_arithmetic.server_app:app"
+clientapp = "fl_task_arithmetic.client_app:app"
+
+# Custom config values accessible via `context.run_config`
+[tool.flwr.app.config]
+num-server-rounds = 3
+fraction-train = 0.5
+local-epochs = 1
+lr = 0.01
+
+# Default federation to use when running the app
+[tool.flwr.federations]
+default = "local-simulation"
+
+# Local simulation federation with 10 virtual SuperNodes
+[tool.flwr.federations.local-simulation]
+options.num-supernodes = 10
+options.backend.client-resources.num-cpus = 1 # each ClientApp assumes to use 1 CPU core (default is 2)
+options.backend.client-resources.num-gpus = 0.5 # each client uses 100% of GPU Vram

@@ -1,0 +1,6 @@
+# If we want to override some options of the pyproject.toml
+# we can produce mutliple configuration files istead of edit the code 
+# and rely on the framework
+lr = 0.001
+
+# the only limitation is that we can only override the values that are present in the pyproject.toml
