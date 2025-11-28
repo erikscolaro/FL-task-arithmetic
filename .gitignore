@@ -174,3 +174,4 @@ notebooks/features/*
 
 wandb/
 artifacts/
+**/*.pth

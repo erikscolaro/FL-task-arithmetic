@@ -55,12 +55,7 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Initialize Wandb API and Run
     # ------------------------------
-    wandb_api = wandb.Api()
-    last_round = 0
     run_id_str = f"{project}-{group}-{run_id}-server"
-    run_online = wandb_api.run(
-        f"{entity}/{project}/{project}-{group}-{run_id}-server"
-    )
 
     # Initialize Wandb run for logging
     run = wandb.init(
@@ -72,6 +67,12 @@ def main(grid: Grid, context: Context) -> None:
         notes=notes,
         resume=resume,
         mode="online",
+    )
+
+    wandb_api = wandb.Api()
+    last_round = 0
+    run_online = wandb_api.run(
+        f"{entity}/{project}/{project}-{group}-{run_id}-server"
     )
 
     # ------------------------------
@@ -93,12 +94,12 @@ def main(grid: Grid, context: Context) -> None:
     else:
         # Try to load the last model checkpoint from Wandb
         try:
-            load_model_from_wandb(model=global_model, entity=entity, project=project, group=group)
             history = run_online.history(keys=["round"], pandas=False)
             last_round = history[-1]["round"]
             print(
                 f"I find a previous run on the cloud. I'll resume from round {last_round}."
             )
+            load_model_from_wandb(run=run, model=global_model, group=group)
         except Exception:
             print("Starting from scratch.")
             # Optionally, initialize with a pretrained backbone
@@ -127,8 +128,14 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Save Final Model to Disk
     # ------------------------------
-    print("\nSaving final model to disk...")
-    state_dict = result.arrays.to_torch_state_dict()
-    os.makedirs("results", exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    torch.save(state_dict, f"results/{timestamp}-final_model.pt")
+    # Extract the final model state dict from the result and load it into the model
+    if hasattr(result, "arrays"):
+        global_model.load_state_dict(result.arrays.to_torch_state_dict())
+    else:
+        print("Warning: result does not have 'arrays' attribute. Model not updated.")
+    print("\nSaving final model to wandb...")
+    save_model_to_wandb(run=run, model=global_model, group=group)
+
+    run.finish()
+
+
