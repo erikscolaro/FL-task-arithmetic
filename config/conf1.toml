@@ -4,3 +4,7 @@
 lr = 0.01
 
 # the only limitation is that we can only override the values that are present in the pyproject.toml
+
+# Wandb, flag to name the experiment 
+group = "experiment-test"
+notes = "Test"
