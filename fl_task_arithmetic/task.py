@@ -1,14 +1,32 @@
 """FL-task-arithmetic: A Flower / PyTorch app."""
 
+from typing import Optional, cast
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from flwr_datasets import FederatedDataset
-from flwr_datasets.partitioner import IidPartitioner
+from flwr_datasets.partitioner import PathologicalPartitioner
 from flwr_datasets.preprocessor import Divider
 from flwr.app import Context
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, Normalize, ToTensor
+from torchvision.transforms import Compose, Normalize, ToTensor, Resize, CenterCrop
+
+class CustomDino(nn.Module):
+    def __init__(self, num_classes: int = 100, backbone: Optional[nn.Module] = None):
+        super().__init__()
+        if backbone is None:
+            # Carica DINO senza pretrained e rimuove la head
+            backbone = cast(nn.Module, torch.hub.load(
+                "facebookresearch/dino:main", "dino_vits16", pretrained=False
+            ))
+        self.backbone: nn.Module = backbone
+        self.classifier = nn.Linear(384, num_classes)  # 384 = output CLS token DINO ViT-S/16
+
+    def forward(self, x: torch.Tensor):
+        features = self.backbone(x)        # [batch, 384]
+        logits = self.classifier(features) # [batch, num_classes]
+        return logits #, features
+
 
 
 class Net(nn.Module):
@@ -34,12 +52,22 @@ class Net(nn.Module):
 
 fds = None  # Cache FederatedDataset
 
-pytorch_transforms = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+# parameters for normalization are avaiable online and are standard for the cifar100, no need to recompute them.
+pytorch_transforms = Compose([ToTensor(), Normalize( (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))])
 
+dino_transforms = Compose(
+    [
+        Resize(256),
+        CenterCrop(224),
+        ToTensor(),
+        # here, mean and std dev of cifar 100 not dino, because training phase
+        Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+    ]
+)
 
 def apply_transforms(batch):
     """Apply transforms to the partition from FederatedDataset."""
-    batch["img"] = [pytorch_transforms(img) for img in batch["img"]]
+    batch["img"] = [dino_transforms(img) for img in batch["img"]]
     return batch
 
 
@@ -55,9 +83,11 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
     val-ratio-of-train = 0.1, the resulting splits are:
         {"train": 45k images, "val": 5k images, "test": 10k images}.
 
-    The training split is then partitioned among clients using a 
-    strategy defined by 'partitioner-class-number'. If this number 
-    is 100, the partitioning is IID.
+    The training split is then partitioned among clients using PathologicalPartitioner,
+    that takes from the toml a parameter called 'num-classes-per-partition'. 
+    If this number is equal to the number of classes in the dataset, the partitioning is IID.
+    Otherwise, the partitions are non-IID and in the extreme case (=1) each partition has samples
+    from only one class (extreme non-IID)
 
     Each client receives a partition. For instance, with 10 clients, 
     each receives 45k / 10 = 4.5k images. From the client's point of 
@@ -73,7 +103,14 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
     # Only initialize `FederatedDataset` once
     global fds
     if fds is None:
-        partitioner = IidPartitioner(num_partitions=num_partitions)
+        partitioner = PathologicalPartitioner(
+            num_partitions=num_partitions,
+            partition_by="fine_label",
+            num_classes_per_partition=context.run_config["num-classes-per-partition"], # type: ignore
+            class_assignment_mode="deterministic",  # deterministic to comply with eventual checkpoints
+            shuffle=True, # Randomize the order of samples after the partition.
+            seed=42, #TODO: should we modify the default value?
+        )
         # train split -> train + validation split
         preprocessor = Divider(
             divide_config={

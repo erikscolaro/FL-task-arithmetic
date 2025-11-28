@@ -5,7 +5,7 @@ import torch
 from flwr.app import ArrayRecord, Context, Message, MetricRecord, RecordDict
 from flwr.clientapp import ClientApp
 
-from fl_task_arithmetic.task import Net, load_data
+from fl_task_arithmetic.task import CustomDino, Net, load_data
 from fl_task_arithmetic.task import test as test_fn
 from fl_task_arithmetic.task import train as train_fn
 
@@ -18,7 +18,7 @@ def train(msg: Message, context: Context):
     """Train the model on local data."""
 
     # Load the model and initialize it with the received weights
-    model = Net()
+    model = CustomDino(num_classes=100)
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict()) # type: ignore
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -53,7 +53,7 @@ def evaluate(msg: Message, context: Context):
     """Evaluate the model on local data."""
 
     # Load the model and initialize it with the received weights
-    model = Net()
+    model = CustomDino()
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict()) # type: ignore
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)

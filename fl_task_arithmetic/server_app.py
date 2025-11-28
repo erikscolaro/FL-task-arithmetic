@@ -1,11 +1,13 @@
 """FL-task-arithmetic: A Flower / PyTorch app."""
 
+from typing import cast
 import torch
+import torch.nn as nn
 from flwr.app import ArrayRecord, ConfigRecord, Context
 from flwr.serverapp import Grid, ServerApp
 from flwr.serverapp.strategy import FedAvg
 
-from fl_task_arithmetic.task import Net
+from fl_task_arithmetic.task import CustomDino, Net
 from datetime import datetime
 import os
 
@@ -18,13 +20,17 @@ def main(grid: Grid, context: Context) -> None:
     """Main entry point for the ServerApp."""
 
     # Read run config
-    fraction_train: float = context.run_config["fraction-train"] # type: ignore[call-operator]
-    num_rounds: int = context.run_config["num-server-rounds"] # type: ignore[call-operator]
-    lr: float = context.run_config["lr"] # type: ignore[call-operator]
+    fraction_train: float = context.run_config["fraction-train"]  # type: ignore[call-operator]
+    num_rounds: int = context.run_config["num-server-rounds"]  # type: ignore[call-operator]
+    lr: float = context.run_config["lr"]  # type: ignore[call-operator]
 
     # Load global model
-    global_model = Net()
+    start_backbone = cast(nn.Module, torch.hub.load("facebookresearch/dino:main", "dino_vits16", pretrained=True))
+    print("loaded predefined model")
+    global_model = CustomDino(num_classes=100, backbone=start_backbone)
+    print("Corretly instantiated the global initial model ")
     arrays = ArrayRecord(global_model.state_dict())
+    print("correcly created the state dict for the global model")
 
     # Initialize FedAvg strategy
     strategy = FedAvg(fraction_train=fraction_train)
