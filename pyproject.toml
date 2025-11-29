@@ -34,7 +34,7 @@ clientapp = "fl_task_arithmetic.client_app:app"
 
 # Custom config values accessible via `context.run_config`
 [tool.flwr.app.config]
-num-server-rounds = 2
+num-server-rounds = 5
 fraction-train = 0.2
 local-epochs = 1 
 lr = 0.1
@@ -52,7 +52,7 @@ num-classes-per-partition = 20
 # Weights & Biases (wandb) configuration
 entity = "aml-fl-project"
 project = "fl-task-arithmetic"
-group = "experiment-0"
+group = "experiment-1"
 notes = "Federated learning with Flower and CIFAR100"
 run_id = 0
 # The 'resume' option controls how wandb handles resuming runs.
@@ -61,6 +61,7 @@ run_id = 0
 #   - "must": Only resume if a matching run ID is found, otherwise raise an error.
 #   - "never": Always start a new run, never resume.
 resume = "allow" 
+server-checkpoint-interval = 2 # checkpoint of the server model every checkpoint-interval rounds
 
 # Default federation to use when running the app
 [tool.flwr.federations]

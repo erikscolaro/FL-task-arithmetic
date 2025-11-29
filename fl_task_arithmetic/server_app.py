@@ -99,13 +99,13 @@ def main(grid: Grid, context: Context) -> None:
             print(
                 f"I find a previous run on the cloud. I'll resume from round {last_round}."
             )
-            load_model_from_wandb(run=run, model=global_model, group=group)
+            load_model_from_wandb(run=run, model=global_model)
         except Exception:
             print("Starting from scratch.")
             # Optionally, initialize with a pretrained backbone
             # start_backbone = cast(nn.Module, torch.hub.load("facebookresearch/dino:main", "dino_vits16", pretrained=True))
             # global_model = CustomDino(num_classes=100, backbone=start_backbone)
-            save_model_to_wandb(run=run, model=global_model, group=group)
+            save_model_to_wandb(run=run, model=global_model)
 
     # ------------------------------
     # Prepare Model State for Federated Learning
@@ -134,7 +134,7 @@ def main(grid: Grid, context: Context) -> None:
     else:
         print("Warning: result does not have 'arrays' attribute. Model not updated.")
     print("\nSaving final model to wandb...")
-    save_model_to_wandb(run=run, model=global_model, group=group)
+    save_model_to_wandb(run=run, model=global_model)
 
     run.finish()
 

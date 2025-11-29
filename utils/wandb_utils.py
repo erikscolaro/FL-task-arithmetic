@@ -4,7 +4,7 @@ from torch.nn import Module
 from pathlib import Path
 
 def save_model_to_wandb(
-    run: wandb.Run, model: Module, group: str, filename: str = "model.pth"
+    run: wandb.Run, model: Module, filename: str = "model.pth"
 ) -> None:
     """Save a PyTorch model to WandB as an artifact."""
 
@@ -12,7 +12,7 @@ def save_model_to_wandb(
     torch.save(model.state_dict(), filename)
 
     # 2. Create artifact
-    artifact_name = f"{group}-checkpoints"
+    artifact_name = f"{run.group}-checkpoints" if hasattr(run, "group") and run.group else "checkpoints"
     artifact = wandb.Artifact(
         name=artifact_name,
         type="model"
@@ -28,12 +28,11 @@ def save_model_to_wandb(
 def load_model_from_wandb(
     run: wandb.Run,
     model: Module,
-    group: str,
     version: str = "latest"
 ) -> None:
     """Download the latest model artifact and load it into `model`."""
     try:
-        artifact_name = f"{group}-checkpoints"
+        artifact_name = f"{run.group}-checkpoints" if hasattr(run, "group") and run.group else "checkpoints"
         artifact = run.use_artifact(f"{artifact_name}:{version}", type="model")
         artifact_dir = artifact.download()
         model_path = Path(artifact_dir) / "model.pth"

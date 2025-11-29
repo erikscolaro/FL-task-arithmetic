@@ -13,7 +13,6 @@ from flwr.common import (
 )
 from flwr.server import Grid
 from flwr.serverapp.strategy import FedAvg
-
 from flwr.serverapp.strategy.strategy_utils import (
     aggregate_arrayrecords,
     aggregate_metricrecords,
@@ -21,6 +20,9 @@ from flwr.serverapp.strategy.strategy_utils import (
     validate_message_reply_consistency,
 )
 import wandb
+
+from fl_task_arithmetic.task import Net
+from utils.wandb_utils import save_model_to_wandb
 
 # we override some functions of fedavg to implement checkpointing
 # pylint: disable=too-many-instance-attributes
@@ -75,11 +77,17 @@ class CustomFedAvg(FedAvg):
                 self.weighted_by_key,
             )
 
-            if metrics is not None:
-                wandb.log({
+            run = wandb.run
+            if run is not None and metrics is not None and arrays is not None:
+                # Logs train data
+                run.log({
                     "round": server_round,
                     **dict(metrics)
                 })
+                # Logs model data
+                model = Net()
+                model.load_state_dict(arrays.to_torch_state_dict())
+                save_model_to_wandb(run, model=model)
 
         return arrays, metrics
 
@@ -129,7 +137,8 @@ class CustomFedAvg(FedAvg):
                 self.weighted_by_key,
             )
 
-            if metrics is not None:
+            run = wandb.run
+            if run is not None and metrics is not None:
                 wandb.log({
                     "round": server_round,
                     **dict(metrics)
