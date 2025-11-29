@@ -6,7 +6,7 @@ from flwr.app import ArrayRecord, ConfigRecord, Context
 from flwr.serverapp import Grid, ServerApp
 from flwr.serverapp.strategy import FedAvg
 import wandb
-from fl_task_arithmetic.strategy import CustomFedAvg
+from fl_task_arithmetic.strategy import CustomFedAvg, get_evaluate_fn
 from fl_task_arithmetic.task import CustomDino, Net
 from datetime import datetime
 import os
@@ -16,6 +16,7 @@ from utils.wandb_utils import load_model_from_wandb, save_model_to_wandb
 # ServerApp Initialization
 # ------------------------------
 app = ServerApp()
+
 
 # ------------------------------
 # Main Entry Point
@@ -27,21 +28,21 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Read Configuration from Context
     # ------------------------------
-    fraction_train: float = context.run_config["fraction-train"]  #type:ignore
-    num_rounds: int = context.run_config["num-server-rounds"]     #type:ignore
-    lr: float = context.run_config["lr"]                          #type:ignore
+    fraction_train: float = context.run_config["fraction-train"]  # type:ignore
+    num_rounds: int = context.run_config["num-server-rounds"]  # type:ignore
+    lr: float = context.run_config["lr"]  # type:ignore
 
     # ------------------------------
     # Read Wandb (Weights & Biases) Configuration
     # ------------------------------
-    
+
     entity = str(context.run_config["entity"])
     project = str(context.run_config["project"])
     group = str(context.run_config["group"])
     notes = str(context.run_config["notes"])
     resume = cast(Literal["allow", "must", "never"], (context.run_config["resume"]))
     run_id = int(context.run_config["run_id"])
-    
+
     print(
         f"Wandb config:\n"
         f"\tentity={entity}\n"
@@ -71,9 +72,7 @@ def main(grid: Grid, context: Context) -> None:
 
     wandb_api = wandb.Api()
     last_round = 0
-    run_online = wandb_api.run(
-        f"{entity}/{project}/{project}-{group}-{run_id}-server"
-    )
+    run_online = wandb_api.run(f"{entity}/{project}/{project}-{group}-{run_id}-server")
 
     # ------------------------------
     # Model Initialization and Recovery
@@ -100,6 +99,10 @@ def main(grid: Grid, context: Context) -> None:
                 f"I find a previous run on the cloud. I'll resume from round {last_round}."
             )
             load_model_from_wandb(run=run, model=global_model)
+            # updating context
+            context.run_config["server-round"] = last_round
+            context.run_config["num-server-rounds"] += last_round
+            num_rounds+=last_round
         except Exception:
             print("Starting from scratch.")
             # Optionally, initialize with a pretrained backbone
@@ -113,7 +116,6 @@ def main(grid: Grid, context: Context) -> None:
     arrays = ArrayRecord(global_model.state_dict())
     print("correcly created the state dict for the global model")
 
-
     # ------------------------------
     # Start Federated Training
     # ------------------------------
@@ -121,21 +123,13 @@ def main(grid: Grid, context: Context) -> None:
     result = strategy.start(
         grid=grid,
         initial_arrays=arrays,
-        train_config=ConfigRecord({"lr": lr, "server-round": last_round}),
+        train_config=ConfigRecord({"lr": lr}),
         num_rounds=num_rounds,
+        evaluate_fn=get_evaluate_fn(
+            run,
+            global_model,
+            context
+        ),
     )
 
-    # ------------------------------
-    # Save Final Model to Disk
-    # ------------------------------
-    # Extract the final model state dict from the result and load it into the model
-    if hasattr(result, "arrays"):
-        global_model.load_state_dict(result.arrays.to_torch_state_dict())
-    else:
-        print("Warning: result does not have 'arrays' attribute. Model not updated.")
-    print("\nSaving final model to wandb...")
-    save_model_to_wandb(run=run, model=global_model)
-
     run.finish()
-
-

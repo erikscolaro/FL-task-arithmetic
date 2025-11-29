@@ -12,6 +12,7 @@ from flwr.common import (
     log,
 )
 from flwr.server import Grid
+from flwr.app import Context
 from flwr.serverapp.strategy import FedAvg
 from flwr.serverapp.strategy.strategy_utils import (
     aggregate_arrayrecords,
@@ -19,10 +20,13 @@ from flwr.serverapp.strategy.strategy_utils import (
     sample_nodes,
     validate_message_reply_consistency,
 )
+from flwr_datasets import FederatedDataset
 import wandb
 
-from fl_task_arithmetic.task import Net
+from fl_task_arithmetic.task import Net, load_server_test_data, test
 from utils.wandb_utils import save_model_to_wandb
+import torch
+from torch.utils.data import DataLoader
 
 # we override some functions of fedavg to implement checkpointing
 # pylint: disable=too-many-instance-attributes
@@ -77,18 +81,6 @@ class CustomFedAvg(FedAvg):
                 self.weighted_by_key,
             )
 
-            run = wandb.run
-            if run is not None and metrics is not None and arrays is not None:
-                # Logs train data
-                run.log({
-                    "round": server_round,
-                    **dict(metrics)
-                })
-                # Logs model data
-                model = Net()
-                model.load_state_dict(arrays.to_torch_state_dict())
-                save_model_to_wandb(run, model=model)
-
         return arrays, metrics
 
     def configure_evaluate(
@@ -137,11 +129,43 @@ class CustomFedAvg(FedAvg):
                 self.weighted_by_key,
             )
 
-            run = wandb.run
-            if run is not None and metrics is not None:
-                wandb.log({
-                    "round": server_round,
-                    **dict(metrics)
-                })
-       
         return metrics
+
+
+def get_evaluate_fn(
+    run: wandb.Run, model: Net, context: Context
+):
+    def evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
+        checkpoint_interval  = int(context.run_config["server-checkpoint-interval"])
+        total_round = int(context.run_config["num-server-rounds"])
+        print(context.run_config["server-round"])
+        state_dict = arrays.to_torch_state_dict()
+        model.load_state_dict(state_dict=state_dict)
+
+        # Save model every `save_every_round` round and for the last round
+        if server_round != 0 and (
+            server_round == total_round or server_round % checkpoint_interval == 0
+        ):
+            save_model_to_wandb(run, model)
+
+        # Perform evaluation on the model with the given arrays
+        model.eval()
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        dataset = load_server_test_data()
+
+        # TODO: non funziona, non riesce ad ottenere il dtaset da task.
+
+        if dataset is not None:
+            testloader = DataLoader(
+                dataset=dataset, #type: ignore
+                batch_size=context.run_config["client-batch-size"],  # type: ignore[call-operator]
+            )
+            avg_loss, accuracy = test(model, testloader ,device)
+
+            wandb.log({"server/val_accuracy": accuracy, "server/val_loss": avg_loss, "server_round": server_round})
+        else:
+            print("Error obtaining the test split from the federated dataset.")
+
+        return MetricRecord()
+
+    return evaluate

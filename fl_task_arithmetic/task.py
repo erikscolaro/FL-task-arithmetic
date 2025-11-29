@@ -142,6 +142,12 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
     return trainloader, testloader
 
 
+def load_server_test_data():
+    if fds is not None:
+        return fds.load_split("test")
+    else:
+        return None
+
 def train(net, trainloader, epochs, lr, device):
     """Train the model on the training set."""
     net.to(device)  # move model to GPU if available
