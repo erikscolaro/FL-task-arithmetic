@@ -31,6 +31,11 @@ from torch.utils.data import DataLoader
 # we override some functions of fedavg to implement checkpointing
 # pylint: disable=too-many-instance-attributes
 class CustomFedAvg(FedAvg):
+    
+    def __init__(self, last_round: int = 0, *args, **kwargs):
+        self.last_round = last_round
+        super().__init__(*args, **kwargs)
+
     def configure_train(
         self, server_round: int, arrays: ArrayRecord, config: ConfigRecord, grid: Grid
     ) -> Iterable[Message]:
@@ -81,6 +86,12 @@ class CustomFedAvg(FedAvg):
                 self.weighted_by_key,
             )
 
+            if metrics is not None:
+                wandb.log({
+                    "round": server_round + self.last_round,
+                    **dict(metrics)
+                })
+
         return arrays, metrics
 
     def configure_evaluate(
@@ -129,6 +140,12 @@ class CustomFedAvg(FedAvg):
                 self.weighted_by_key,
             )
 
+            if metrics is not None:
+                wandb.log({
+                    "round": server_round + self.last_round,
+                    **dict(metrics)
+                })
+       
         return metrics
 
 

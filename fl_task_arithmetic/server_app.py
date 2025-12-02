@@ -119,12 +119,12 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Start Federated Training
     # ------------------------------
-    strategy = CustomFedAvg(fraction_train=fraction_train)
+    strategy = CustomFedAvg(fraction_train=fraction_train, last_round=last_round)
     result = strategy.start(
         grid=grid,
         initial_arrays=arrays,
         train_config=ConfigRecord({"lr": lr}),
-        num_rounds=num_rounds,
+        num_rounds=num_rounds - last_round,
         evaluate_fn=get_evaluate_fn(
             run,
             global_model,
