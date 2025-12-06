@@ -41,6 +41,7 @@ def load_model_from_wandb(
         artifact = run.use_artifact(f"{artifact_name}:{version}", type="model")
         artifact_dir = artifact.download()
         model_path = Path(artifact_dir) / filename
+        print(f"Loading model from: {model_path}")
         model.load_state_dict(torch.load(model_path, model.device if hasattr(model, 'device') else None))
         print(f"Successfully loaded model from: {model_path}")
         return artifact
