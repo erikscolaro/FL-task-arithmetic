@@ -10,7 +10,7 @@ from fl_task_arithmetic.strategy import CustomFedAvg, get_evaluate_fn
 from fl_task_arithmetic.task import CustomDino, Net
 from datetime import datetime
 import os
-from utils.wandb_utils import load_model_from_wandb, save_model_to_wandb
+from utilities.wandb_utils import load_model_from_wandb, save_model_to_wandb
 
 # ------------------------------
 # ServerApp Initialization
@@ -102,7 +102,7 @@ def main(grid: Grid, context: Context) -> None:
             # updating context
             context.run_config["server-round"] = last_round
             context.run_config["num-server-rounds"] += last_round
-            num_rounds+=last_round
+            num_rounds += last_round
         except Exception:
             print("Starting from scratch.")
             # Optionally, initialize with a pretrained backbone

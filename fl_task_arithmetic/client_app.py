@@ -63,7 +63,7 @@ def evaluate(msg: Message, context: Context):
     # Load the data
     partition_id = context.node_config["partition-id"]
     num_partitions = context.node_config["num-partitions"]
-    _, valloader = load_data(partition_id, num_partitions,context) # type: ignore
+    _, valloader = load_data(partition_id, num_partitions, context) # type: ignore
 
     # Call the evaluation function
     eval_loss, eval_acc = test_fn(

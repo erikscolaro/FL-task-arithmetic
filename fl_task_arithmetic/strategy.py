@@ -24,14 +24,13 @@ from flwr_datasets import FederatedDataset
 import wandb
 
 from fl_task_arithmetic.task import Net, load_server_test_data, test
-from utils.wandb_utils import save_model_to_wandb
+from utilities.wandb_utils import save_model_to_wandb
 import torch
 from torch.utils.data import DataLoader
 
 # we override some functions of fedavg to implement checkpointing
 # pylint: disable=too-many-instance-attributes
 class CustomFedAvg(FedAvg):
-    
     def __init__(self, last_round: int = 0, *args, **kwargs):
         self.last_round = last_round
         super().__init__(*args, **kwargs)

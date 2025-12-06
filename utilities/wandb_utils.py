@@ -4,7 +4,10 @@ from torch.nn import Module
 from pathlib import Path
 
 def save_model_to_wandb(
-    run: wandb.Run, model: Module, filename: str = "model.pth"
+    run: wandb.Run,
+    model: Module, 
+    filename: str = "model.pth",
+    metadata: dict = None,
 ) -> None:
     """Save a PyTorch model to WandB as an artifact."""
 
@@ -15,7 +18,8 @@ def save_model_to_wandb(
     artifact_name = f"{run.group}-checkpoints" if hasattr(run, "group") and run.group else "checkpoints"
     artifact = wandb.Artifact(
         name=artifact_name,
-        type="model"
+        type="model",
+        metadata=metadata or {}
     )
 
     artifact.add_file(filename)
@@ -27,16 +31,19 @@ def save_model_to_wandb(
 
 def load_model_from_wandb(
     run: wandb.Run,
-    model: Module,
+    model: Module, 
+    filename: str = "model.pth",
     version: str = "latest"
-) -> None:
+) -> wandb.Artifact | None:
     """Download the latest model artifact and load it into `model`."""
     try:
         artifact_name = f"{run.group}-checkpoints" if hasattr(run, "group") and run.group else "checkpoints"
         artifact = run.use_artifact(f"{artifact_name}:{version}", type="model")
         artifact_dir = artifact.download()
-        model_path = Path(artifact_dir) / "model.pth"
-        model.load_state_dict(torch.load(model_path))
+        model_path = Path(artifact_dir) / filename
+        model.load_state_dict(torch.load(model_path, model.device if hasattr(model, 'device') else None))
         print(f"Successfully loaded model from: {model_path}")
+        return artifact
     except Exception as e :
+        print(e)
         print(f"Model checkpoint not found on WandB. {e}")
