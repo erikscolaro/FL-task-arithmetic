@@ -38,11 +38,14 @@ class Icarl(nn.Module):
         self.num_classes = num_classes
         self.memory_size = memory_size
         self.feature_dim = feature_dim
+        self.is_old_model_usable = False
 
         self.model = IcarlModel(
             num_classes=num_classes,
         ).to(self.device)
-        self.old_model = None
+        self.old_model = IcarlModel(
+            num_classes=num_classes,
+        ).to(self.device)
 
         self.exemplar_sets = []
         self.exemplar_means = []
