@@ -9,13 +9,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class DinoIcarlModel(nn.Module):
     def __init__(self, device=DEVICE):
         super().__init__()
-        self.dino_backbone = Dino
+        self.dino_backbone = Dino()
         self.icarl_head = get_trained_icarl_classifier(device=device)
+        for param in self.icarl_head.parameters():
+            param.requires_grad = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         features = self.dino_backbone(x)
-        # No gradients for pretrained icarl head
-        with torch.no_grad():
-            out = self.icarl_head(features)
+        out = self.icarl_head(features)
         
         return out

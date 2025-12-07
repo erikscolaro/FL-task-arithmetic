@@ -151,19 +151,17 @@ class Icarl(nn.Module):
 
 
 
-run = wandb.init(
-    entity=ENTITY,
-    project=PROJECT,
-    group=GROUP,
-    name="iCaRL_CIFAR100",
-    id=RUN_ID,
-    resume="allow",
-    mode="online",
-)
-
 def get_trained_icarl_classifier(device=DEVICE) -> nn.Module | None:
     try:
-
+        run = wandb.init(
+            entity=ENTITY,
+            project=PROJECT,
+            group=GROUP,
+            name="iCaRL_CIFAR100",
+            id=RUN_ID,
+            resume="allow",
+            mode="online",
+        )
         icarl = Icarl(
             num_classes=100,
             memory_size=TOTAL_EXEMPLARS_VECTORS,
