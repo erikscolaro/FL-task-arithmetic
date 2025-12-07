@@ -2,6 +2,8 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from models.dino_backbone import Dino
+import wandb
+from utilities.wandb_utils import load_checkpoint_from_wandb
 
 TOTAL_EXEMPLARS_VECTORS = 1000
 
@@ -139,3 +141,37 @@ class Icarl(nn.Module):
             preds = torch.argmin(dists, dim=1)
 
         return preds
+
+
+RUN_ID = "run-1-icarl_cifar100"
+ENTITY = "aml-fl-project"
+PROJECT = "fl-task-arithmetic"
+GROUP = "icarl-cifar100"
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+TOTAL_EXEMPLARS_VECTORS = 1000
+
+
+run = wandb.init(
+    entity=ENTITY,
+    project=PROJECT,
+    group=GROUP,
+    name="iCaRL_CIFAR100",
+    id=RUN_ID,
+    resume="allow",
+    mode="online",
+)
+
+def get_trained_icarl_classifier(device=DEVICE) -> nn.Module:
+    icarl = Icarl(
+        num_classes=100,
+        memory_size=TOTAL_EXEMPLARS_VECTORS,
+        device=device
+    )
+    checkpoint = load_checkpoint_from_wandb(
+        run,
+        icarl,
+        "model.pth"
+    )
+    checkpoint_dict, artifact = checkpoint
+    icarl.load_state_dict(checkpoint_dict['model'])
+    return icarl.model.classifier
