@@ -162,16 +162,19 @@ def get_trained_icarl_classifier(device=DEVICE) -> nn.Module | None:
             resume="allow",
             mode="online",
         )
+
         icarl = Icarl(
             num_classes=100,
             memory_size=TOTAL_EXEMPLARS_VECTORS,
             device=device
         )
+
         checkpoint = load_checkpoint_from_wandb(
             run,
             icarl,
             "model.pth"
         )
+        
         checkpoint_dict, artifact = checkpoint
         icarl.load_state_dict(checkpoint_dict['model'])
         return icarl.model.classifier
