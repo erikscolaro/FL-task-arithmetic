@@ -12,12 +12,12 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor, Resize, CenterCrop
 
 class CustomDino(nn.Module):
-    def __init__(self, num_classes: int = 100, backbone: Optional[nn.Module] = None):
+    def __init__(self, num_classes: int = 100,pretrained: bool = True, backbone: Optional[nn.Module] = None):
         super().__init__()
         if backbone is None:
             # Carica DINO senza pretrained e rimuove la head
             backbone = cast(nn.Module, torch.hub.load(
-                "facebookresearch/dino:main", "dino_vits16", pretrained=False
+                "facebookresearch/dino:main", "dino_vits16", pretrained = pretrained
             ))
         self.backbone: nn.Module = backbone
         self.classifier = nn.Linear(384, num_classes)  # 384 = output CLS token DINO ViT-S/16

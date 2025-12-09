@@ -18,7 +18,7 @@ def train(msg: Message, context: Context):
     """Train the model on local data."""
 
     # Load the model and initialize it with the received weights
-    model = CustomDino()
+    model = CustomDino(pretrained=False)
     # model= Net()
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict()) # type: ignore
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -54,7 +54,7 @@ def evaluate(msg: Message, context: Context):
     """Evaluate the model on local data."""
 
     # Load the model and initialize it with the received weights
-    model = CustomDino()
+    model = CustomDino(pretrained=False)
     # model = Net()
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict()) # type: ignore
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

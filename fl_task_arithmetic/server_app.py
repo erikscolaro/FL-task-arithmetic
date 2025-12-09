@@ -78,7 +78,7 @@ def main(grid: Grid, context: Context) -> None:
     # Model Initialization and Recovery
     # ------------------------------
     #global_model = Net()
-    global_model = CustomDino()  # Alternative model
+    global_model = CustomDino(pretrained=True)  # Alternative model
 
     if resume == "never":
         # If not resuming, start from scratch and delete old artifacts
