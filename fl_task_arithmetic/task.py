@@ -67,7 +67,7 @@ dino_transforms = Compose(
 
 def apply_transforms(batch):
     """Apply transforms to the partition from FederatedDataset."""
-    batch["img"] = [pytorch_transforms(img) for img in batch["img"]] #TODO: modifiy with dino transfomrs when switching to to dino
+    batch["img"] = [dino_transforms(img) for img in batch["img"]] 
     return batch
 
 
@@ -143,10 +143,26 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
 
 
 def load_server_test_data():
-    if fds is not None:
-        return fds.load_split("test")
-    else:
-        return None
+    global fds
+    if fds is None:
+        # Create a 'dummy' partitioner to satisfy the constructor requirement.
+        # We use standard values for CIFAR-100 (fine_label).
+        # These values don't affect the test split, they just prevent the crash.
+        dummy_partitioner = PathologicalPartitioner(
+            num_partitions=100,
+            partition_by="fine_label",
+            num_classes_per_partition=100,
+        )
+        
+        fds = FederatedDataset(
+            dataset="uoft-cs/cifar100",
+            partitioners={"train": dummy_partitioner},
+        )
+
+    test_split = fds.load_split("test")
+    test_split = test_split.with_transform(apply_transforms)
+    return test_split
+
 
 def train(net, trainloader, epochs, lr, device):
     """Train the model on the training set."""

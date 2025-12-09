@@ -63,7 +63,7 @@ def main(grid: Grid, context: Context) -> None:
         entity=entity,
         project=project,
         group=group,
-        name="server",
+        name="The first FL baseline",
         id=run_id_str,
         notes=notes,
         resume=resume,
@@ -77,8 +77,8 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Model Initialization and Recovery
     # ------------------------------
-    global_model = Net()
-    # global_model = CustomDino()  # Alternative model
+    #global_model = Net()
+    global_model = CustomDino()  # Alternative model
 
     if resume == "never":
         # If not resuming, start from scratch and delete old artifacts

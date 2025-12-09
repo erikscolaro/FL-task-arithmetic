@@ -35,9 +35,9 @@ clientapp = "fl_task_arithmetic.client_app:app"
 
 # Custom config values accessible via `context.run_config`
 [tool.flwr.app.config]
-num-server-rounds = 5
-fraction-train = 0.2
-local-epochs = 1 
+num-server-rounds = 50
+fraction-train = 0.1        # C  
+local-epochs = 4            # J
 lr = 0.1
 val-ratio-of-train = 0.1 # percentage of CIFAR100 training split used as validation
 client-test-ratio-of-partition = 0.2 # percentage of the partition received to each client that becomes the test split
@@ -48,14 +48,14 @@ client-batch-size = 32 # batch size for client training and evaluation
 #       each client receives a partition with sample from only 1 class -> extreme non iid
 # - if set to 100 (max value, the number of CIFAR100 fine_labels), 
 #       each client receives samples from all the classes -> iid condition
-num-classes-per-partition = 20 
+num-classes-per-partition = 100 
 
 # Weights & Biases (wandb) configuration
 entity = "aml-fl-project"
 project = "fl-task-arithmetic"
-group = "experiment-1"
-notes = "Federated learning with Flower and CIFAR100"
-run_id = 0
+group = "The-first-FL-baseline"
+notes = "Implement the algorithm described in [10], fix K=100, C=0.1, adopt an iid sharding of the training set and fix J=4 the number of local steps. "
+run_id = 1
 # The 'resume' option controls how wandb handles resuming runs.
 # Possible values:
 #   - "allow": Resume the run if a matching run ID is found, otherwise start a new run.
@@ -70,6 +70,6 @@ default = "local-simulation"
 
 # Local simulation federation with 10 virtual SuperNodes
 [tool.flwr.federations.local-simulation]
-options.num-supernodes = 2
+options.num-supernodes = 100                  # K
 options.backend.client-resources.num-cpus = 1 # each ClientApp assumes to use 1 CPU core (default is 2)
 options.backend.client-resources.num-gpus = 0.25 # each client uses 100% of GPU Vram
