@@ -170,9 +170,12 @@ cython_debug/
 **/*.ipynb-meta
 **/*.ipynb_metadata
 
+
 notebooks/data/*
 notebooks/features/*
+utilities/data/*
 
 wandb/
 artifacts/
 **/*.pth
+!utilities/trained/nearest_centroid_classifier.pth

@@ -11,23 +11,6 @@ from flwr.app import Context
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor, Resize, CenterCrop
 
-class CustomDino(nn.Module):
-    def __init__(self, num_classes: int = 100, backbone: Optional[nn.Module] = None):
-        super().__init__()
-        if backbone is None:
-            # Carica DINO senza pretrained e rimuove la head
-            backbone = cast(nn.Module, torch.hub.load(
-                "facebookresearch/dino:main", "dino_vits16", pretrained=False
-            ))
-        self.backbone: nn.Module = backbone
-        self.classifier = nn.Linear(384, num_classes)  # 384 = output CLS token DINO ViT-S/16
-
-    def forward(self, x: torch.Tensor):
-        features = self.backbone(x)        # [batch, 384]
-        logits = self.classifier(features) # [batch, num_classes]
-        return logits #, features
-
-
 
 class Net(nn.Module):
     """Model (simple CNN adapted from 'PyTorch: A 60 Minute Blitz')"""
