@@ -48,7 +48,14 @@ client-batch-size = 32 # batch size for client training and evaluation
 #       each client receives a partition with sample from only 1 class -> extreme non iid
 # - if set to 100 (max value, the number of CIFAR100 fine_labels), 
 #       each client receives samples from all the classes -> iid condition
-num-classes-per-partition = 20 
+num-classes-per-partition = 5
+
+# Sparse fine-tuning configuration
+use-sparse-finetuning = false  # Enable sparse fine-tuning with gradient masking
+use-custom-dino = false  # Use CustomDino model with iCaRL classifier
+sparsity-ratio = 0.0  # Fraction of parameters to freeze (0.0 = no sparsity, 0.9 = freeze 90%)
+num-calibration-rounds = 1  # Number of iterative mask calibration rounds
+num-batches-calibration = 10  # Number of batches to use per calibration round (null = all)
 
 # Weights & Biases (wandb) configuration
 entity = "aml-fl-project"

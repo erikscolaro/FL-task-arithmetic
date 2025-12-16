@@ -1,6 +1,6 @@
 """FL-task-arithmetic: A Flower / PyTorch app."""
 
-from typing import Optional, cast
+from typing import Optional, cast, Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -10,6 +10,8 @@ from flwr_datasets.preprocessor import Divider
 from flwr.app import Context
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor, Resize, CenterCrop
+
+from fl_task_arithmetic.model import CustomDino
 
 
 class Net(nn.Module):
@@ -35,22 +37,21 @@ class Net(nn.Module):
 
 fds = None  # Cache FederatedDataset
 
-# parameters for normalization are avaiable online and are standard for the cifar100, no need to recompute them.
-pytorch_transforms = Compose([ToTensor(), Normalize( (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))])
-
+# DINO transforms (for use with CustomDino model)
 dino_transforms = Compose(
     [
         Resize(256),
         CenterCrop(224),
         ToTensor(),
-        # here, mean and std dev of cifar 100 not dino, because training phase
+        # DINO was trained with ImageNet statistics, but we use CIFAR-100 for fine-tuning
         Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
     ]
 )
 
 def apply_transforms(batch):
     """Apply transforms to the partition from FederatedDataset."""
-    batch["img"] = [pytorch_transforms(img) for img in batch["img"]] #TODO: modifiy with dino transfomrs when switching to to dino
+    # Use dino_transforms for DINO model, pytorch_transforms for simple CNN
+    batch["img"] = [dino_transforms(img) for img in batch["img"]]
     return batch
 
 
@@ -148,6 +149,98 @@ def train(net, trainloader, epochs, lr, device):
             optimizer.step()
             running_loss += loss.item()
     avg_trainloss = running_loss / len(trainloader)
+    return avg_trainloss
+
+
+def train_sparse(
+    net,
+    trainloader,
+    epochs,
+    lr,
+    device,
+    sparsity_ratio: float = 0.0,
+    num_calibration_rounds: int = 1,
+    num_batches_calibration: Optional[int] = 10,
+):
+    """
+    Train the model using sparse fine-tuning with gradient masking.
+    
+    Two-step sparse fine-tuning process:
+    1. Calibrate gradient masks by identifying least sensitive parameters (low gradient magnitude)
+    2. Fine-tune using SparseSGDM with the calibrated masks
+    
+    Args:
+        net: Model to train (should be CustomDino with frozen classifier)
+        trainloader: Training data loader
+        epochs: Number of training epochs
+        lr: Learning rate
+        device: Device to train on
+        sparsity_ratio: Fraction of parameters to freeze (0.0 to 1.0)
+        num_calibration_rounds: Number of mask calibration rounds
+        num_batches_calibration: Batches to use per calibration round
+        
+    Returns:
+        Average training loss
+    """
+    from fl_task_arithmetic.sensitivity import calibrate_gradient_masks, get_masked_parameters
+    from fl_task_arithmetic.sparseSGDM import SparseSGDM
+    
+    net.to(device)
+    criterion = torch.nn.CrossEntropyLoss().to(device)
+    
+    # Step 1: Calibrate gradient masks if sparsity > 0
+    if sparsity_ratio > 0.0:
+        print(f"\n=== Step 1: Calibrating Gradient Masks ===")
+        masks = calibrate_gradient_masks(
+            model=net,
+            dataloader=trainloader,
+            sparsity_ratio=sparsity_ratio,
+            num_calibration_rounds=num_calibration_rounds,
+            device=device,
+            num_batches_per_round=num_batches_calibration,
+        )
+        
+        # Prepare masked parameters for SparseSGDM
+        masked_params = get_masked_parameters(net, masks)
+        
+        # Use SparseSGDM with masks
+        optimizer = SparseSGDM(
+            net.parameters(),
+            masks=masked_params,
+            lr=lr,
+            momentum=0.9,
+            weight_decay=5e-4,
+        )
+        print(f"\n=== Step 2: Sparse Fine-tuning with SparseSGDM ===")
+    else:
+        # No sparsity, use standard Adam
+        optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+        print(f"\n=== Standard Fine-tuning (no sparsity) ===")
+    
+    # Step 2: Fine-tune with masked gradients
+    net.train()
+    running_loss = 0.0
+    
+    for epoch in range(epochs):
+        epoch_loss = 0.0
+        for batch in trainloader:
+            images = batch["img"].to(device)
+            labels = batch["fine_label"].to(device)
+            
+            optimizer.zero_grad()
+            loss = criterion(net(images), labels)
+            loss.backward()
+            optimizer.step()
+            
+            epoch_loss += loss.item()
+        
+        avg_epoch_loss = epoch_loss / len(trainloader)
+        running_loss += avg_epoch_loss
+        
+        if (epoch + 1) % max(1, epochs // 5) == 0:
+            print(f"  Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}")
+    
+    avg_trainloss = running_loss / epochs
     return avg_trainloss
 
 
