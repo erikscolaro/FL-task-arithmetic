@@ -104,10 +104,26 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
 
 
 def load_server_test_data():
-    if fds is not None:
-        return fds.load_split("test")
-    else:
-        return None
+    """
+    Load the centralized test dataset for server-side evaluation.
+    
+    This function loads the test split directly from HuggingFace datasets,
+    independent of the federated partitioning used by clients. This is 
+    necessary because the server runs in a separate process and doesn't
+    have access to the client's FederatedDataset instance.
+    """
+    from datasets import load_dataset
+    
+    # Load CIFAR-100 test split directly (not partitioned)
+    dataset = load_dataset("uoft-cs/cifar100", split="test")
+    
+    # Apply DINO transforms using set_transform (applies on-the-fly)
+    def apply_transforms(batch):
+        batch["img"] = [dino_transforms(img) for img in batch["img"]]
+        return batch
+    
+    dataset.set_transform(apply_transforms)  # type: ignore[union-attr]
+    return dataset
 
 def train(net, trainloader, epochs, lr, device):
     """Train the model on the training set."""

@@ -169,8 +169,6 @@ def get_evaluate_fn(
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         dataset = load_server_test_data()
 
-        # TODO: non funziona, non riesce ad ottenere il dtaset da task.
-
         if dataset is not None:
             testloader = DataLoader(
                 dataset=dataset, #type: ignore
