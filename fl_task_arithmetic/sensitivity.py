@@ -81,6 +81,7 @@ def calibrate_gradient_masks(
             model, dataloader, device, num_batches_per_round
         )
 
+        # Collect all active scores
         all_scores = []
         for name in sensitivity_scores:
             active_scores = sensitivity_scores[name][masks[name] == 1]
@@ -91,7 +92,11 @@ def calibrate_gradient_masks(
             break
 
         all_scores = torch.cat(all_scores)
-        threshold = torch.quantile(all_scores, sparsity_ratio)
+        
+        # Use kthvalue instead of quantile - more memory efficient for large tensors
+        k = int(sparsity_ratio * all_scores.numel())
+        k = max(1, min(k, all_scores.numel()))  # Clamp to valid range
+        threshold = torch.kthvalue(all_scores.flatten(), k).values
         print(f"  Sensitivity threshold: {threshold:.6f}")
 
         total_params = 0
