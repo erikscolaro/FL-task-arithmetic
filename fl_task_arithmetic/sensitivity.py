@@ -139,40 +139,41 @@ def calibrate_gradient_masks(
             num_batches=num_batches_per_round,
         )
 
-        # Collect ALL scores (not just active ones - TaLoS recomputes globally)
+        # Collect ALL scores globally (TaLoS uses global threshold)
         all_scores = []
+        total_params = 0
         for name in sensitivity_scores:
-            # Only consider currently active parameters for threshold computation
             score = sensitivity_scores[name]
-            mask = masks[name].to(score.device)
-            active_scores = score[mask == 1.0]
-            all_scores.append(active_scores.flatten())
+            all_scores.append(score.flatten())
+            total_params += score.numel()
 
-        if len(all_scores) == 0 or sum(s.numel() for s in all_scores) == 0:
-            print("  Warning: No active parameters remaining!")
+        if len(all_scores) == 0:
+            print("  Warning: No parameters found!")
             break
 
         all_scores = torch.cat(all_scores)
         
-        # Compute threshold: we want to KEEP the top (round_keep_ratio) by sensitivity
-        # So we find the threshold below which we freeze parameters
-        # k-th smallest value where k corresponds to the fraction to freeze
-        num_to_freeze = int(round_sparsity * all_scores.numel())
-        num_to_freeze = max(1, min(num_to_freeze, all_scores.numel() - 1))
+        # Compute threshold based on TOTAL parameters (not just active ones)
+        # We want to keep top (round_keep_ratio) fraction of ALL params
+        num_to_keep = int(round_keep_ratio * total_params)
+        num_to_keep = max(1, min(num_to_keep, total_params))
         
-        threshold = torch.kthvalue(all_scores, num_to_freeze).values
+        # k-th largest = (n - k + 1)-th smallest
+        # We want the num_to_keep-th largest score as threshold
+        k = total_params - num_to_keep + 1
+        k = max(1, min(k, total_params))
+        
+        threshold = torch.kthvalue(all_scores, k).values
         print(f"  Sensitivity threshold: {threshold:.6f}")
 
-        # Update masks based on global threshold
-        total_params = 0
+        # Update masks: keep parameters with score >= threshold
         frozen_params = 0
         for name in masks:
             score = sensitivity_scores[name]
-            # Parameters with score > threshold are kept (mask = 1)
-            # Parameters with score <= threshold are frozen (mask = 0)
-            new_mask = (score > threshold).float()
+            # Parameters with score >= threshold are kept (mask = 1)
+            # Using >= instead of > to handle edge cases where many params have same score
+            new_mask = (score >= threshold).float()
             masks[name] = new_mask
-            total_params += new_mask.numel()
             frozen_params += (new_mask == 0).sum().item()
 
         actual_sparsity = frozen_params / total_params if total_params > 0 else 0
