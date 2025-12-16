@@ -23,7 +23,7 @@ from flwr.serverapp.strategy.strategy_utils import (
 from flwr_datasets import FederatedDataset
 import wandb
 
-from fl_task_arithmetic.task import Net, load_server_test_data, test
+from fl_task_arithmetic.task import CustomDino, load_server_test_data, test
 from utilities.wandb_utils import save_model_to_wandb
 import torch
 from torch.utils.data import DataLoader
@@ -149,12 +149,12 @@ class CustomFedAvg(FedAvg):
 
 
 def get_evaluate_fn(
-    run: wandb.Run, model: Net, context: Context
+    run: wandb.Run, model: CustomDino, context: Context
 ):
     def evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
         checkpoint_interval  = int(context.run_config["server-checkpoint-interval"])
         total_round = int(context.run_config["num-server-rounds"])
-        print(context.run_config["server-round"])
+        print(f"Server round: {server_round}")
         state_dict = arrays.to_torch_state_dict()
         model.load_state_dict(state_dict=state_dict)
 

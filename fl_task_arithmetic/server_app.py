@@ -7,7 +7,7 @@ from flwr.serverapp import Grid, ServerApp
 from flwr.serverapp.strategy import FedAvg
 import wandb
 from fl_task_arithmetic.strategy import CustomFedAvg, get_evaluate_fn
-from fl_task_arithmetic.task import CustomDino, Net
+from fl_task_arithmetic.task import CustomDino
 from datetime import datetime
 import os
 from utilities.wandb_utils import load_model_from_wandb, save_model_to_wandb
@@ -77,8 +77,7 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Model Initialization and Recovery
     # ------------------------------
-    global_model = Net()
-    # global_model = CustomDino()  # Alternative model
+    global_model = CustomDino(num_classes=100)
 
     if resume == "never":
         # If not resuming, start from scratch and delete old artifacts
@@ -86,9 +85,8 @@ def main(grid: Grid, context: Context) -> None:
         for artifact in run_online.logged_artifacts():
             artifact.delete()
         last_round = 0
-        # Optionally, initialize with a pretrained backbone
-        # start_backbone = cast(nn.Module, torch.hub.load("facebookresearch/dino:main", "dino_vits16", pretrained=True))
-        # global_model = CustomDino(num_classes=100, backbone=start_backbone)
+        start_backbone = cast(torch.nn.Module, torch.hub.load("facebookresearch/dino:main", "dino_vits16", pretrained=True))
+        global_model = CustomDino(num_classes=100, backbone=start_backbone)
 
     else:
         # Try to load the last model checkpoint from Wandb

@@ -40,22 +40,21 @@ fraction-train = 0.2
 local-epochs = 1 
 lr = 0.1
 val-ratio-of-train = 0.1 # percentage of CIFAR100 training split used as validation
-client-test-ratio-of-partition = 0.2 # percentage of the partition received to each client that becomes the test split
-client-batch-size = 32 # batch size for client training and evaluation
+client-test-ratio-of-partition = 0.5 # percentage of the partition received to each client that becomes the test split
+client-batch-size = 4 # batch size for client training and evaluation
 
 # number of classes per partition:
 # - if set to 1 (min value), 
 #       each client receives a partition with sample from only 1 class -> extreme non iid
 # - if set to 100 (max value, the number of CIFAR100 fine_labels), 
 #       each client receives samples from all the classes -> iid condition
-num-classes-per-partition = 5
+num-classes-per-partition = 20
 
 # Sparse fine-tuning configuration
-use-sparse-finetuning = false  # Enable sparse fine-tuning with gradient masking
-use-custom-dino = false  # Use CustomDino model with iCaRL classifier
-sparsity-ratio = 0.0  # Fraction of parameters to freeze (0.0 = no sparsity, 0.9 = freeze 90%)
-num-calibration-rounds = 1  # Number of iterative mask calibration rounds
-num-batches-calibration = 10  # Number of batches to use per calibration round (null = all)
+use-sparse-finetuning = true  # Enable sparse fine-tuning with gradient masking
+sparsity-ratio = 0.9  # Fraction of parameters to freeze (0.0 = no sparsity, 0.9 = freeze 90%)
+num-calibration-rounds = 5  # Number of iterative mask calibration rounds
+num-batches-calibration = 2  # Number of batches to use per calibration round (null = all)
 
 # Weights & Biases (wandb) configuration
 entity = "aml-fl-project"
@@ -78,5 +77,5 @@ default = "local-simulation"
 # Local simulation federation with 10 virtual SuperNodes
 [tool.flwr.federations.local-simulation]
 options.num-supernodes = 2
-options.backend.client-resources.num-cpus = 1 # each ClientApp assumes to use 1 CPU core (default is 2)
-options.backend.client-resources.num-gpus = 0.25 # each client uses 100% of GPU Vram
+options.backend.client-resources.num-cpus = 2 # each ClientApp assumes to use 1 CPU core (default is 2)
+options.backend.client-resources.num-gpus = 1 # each client uses 100% of GPU Vram

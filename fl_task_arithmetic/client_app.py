@@ -5,7 +5,7 @@ import torch
 from flwr.app import ArrayRecord, Context, Message, MetricRecord, RecordDict
 from flwr.clientapp import ClientApp
 
-from fl_task_arithmetic.task import CustomDino, Net, load_data
+from fl_task_arithmetic.task import CustomDino, load_data
 from fl_task_arithmetic.task import test as test_fn
 from fl_task_arithmetic.task import train as train_fn
 from fl_task_arithmetic.task import train_sparse as train_sparse_fn
@@ -22,10 +22,7 @@ def train(msg: Message, context: Context):
     use_sparse = context.run_config.get("use-sparse-finetuning", False)
     
     # Load the model and initialize it with the received weights
-    if use_sparse or context.run_config.get("use-custom-dino", False):
-        model = CustomDino(num_classes=100)
-    else:
-        model = Net()
+    model = CustomDino(num_classes=100)
     
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict()) # type: ignore
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -73,14 +70,8 @@ def train(msg: Message, context: Context):
 def evaluate(msg: Message, context: Context):
     """Evaluate the model on local data."""
 
-    # Determine which model to use
-    use_custom_dino = context.run_config.get("use-custom-dino", False) or context.run_config.get("use-sparse-finetuning", False)
-    
     # Load the model and initialize it with the received weights
-    if use_custom_dino:
-        model = CustomDino(num_classes=100)
-    else:
-        model = Net()
+    model = CustomDino(num_classes=100)
     
     model.load_state_dict(msg.content["arrays"].to_torch_state_dict()) # type: ignore
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
