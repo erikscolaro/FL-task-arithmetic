@@ -139,40 +139,52 @@ def calibrate_gradient_masks(
             num_batches=num_batches_per_round,
         )
 
-        # Collect ALL scores globally (TaLoS uses global threshold)
-        all_scores = []
-        total_params = 0
-        for name in sensitivity_scores:
-            score = sensitivity_scores[name]
-            all_scores.append(score.flatten())
-            total_params += score.numel()
+        # Collect ALL scores globally (TaLoS style)
+        all_scores = torch.cat([sensitivity_scores[name].flatten() for name in sensitivity_scores])
+        total_params = all_scores.numel()
 
-        if len(all_scores) == 0:
+        if total_params == 0:
             print("  Warning: No parameters found!")
             break
 
-        all_scores = torch.cat(all_scores)
-        
-        # Compute threshold based on TOTAL parameters (not just active ones)
-        # We want to keep top (round_keep_ratio) fraction of ALL params
-        num_to_keep = int(round_keep_ratio * total_params)
-        num_to_keep = max(1, min(num_to_keep, total_params))
-        
-        # k-th largest = (n - k + 1)-th smallest
-        # We want the num_to_keep-th largest score as threshold
-        k = total_params - num_to_keep + 1
-        k = max(1, min(k, total_params))
-        
-        threshold = torch.kthvalue(all_scores, k).values
-        print(f"  Sensitivity threshold: {threshold:.6f}")
+        # Debug: distribution of scores
+        num_zeros = (all_scores == 0).sum().item()
+        num_nonzeros = (all_scores > 0).sum().item()
+        print(f"  Score stats: {num_zeros} zeros ({100*num_zeros/total_params:.1f}%), "
+              f"{num_nonzeros} non-zeros ({100*num_nonzeros/total_params:.1f}%)")
+        if num_nonzeros > 0:
+            nonzero_scores = all_scores[all_scores > 0]
+            print(f"  Non-zero scores: min={nonzero_scores.min():.2e}, "
+                  f"max={nonzero_scores.max():.2e}, mean={nonzero_scores.mean():.2e}")
 
-        # Update masks: keep parameters with score >= threshold
+        # TaLoS: k = int((1.0 - sparsity) * global_scores.numel())
+        # where sparsity = fraction to KEEP
+        # We have round_keep_ratio = fraction to keep
+        k = int(round_keep_ratio * total_params)
+        
+        if k < 1:
+            print("  Warning: k < 1, skipping round")
+            continue
+            
+        # TaLoS uses kthvalue to find threshold
+        # k-th smallest value = threshold below which we freeze
+        # But we want top-k largest, so we use (total - k + 1)-th smallest
+        k_for_kth = total_params - k + 1
+        k_for_kth = max(1, min(k_for_kth, total_params))
+        
+        threshold, _ = torch.kthvalue(all_scores, k_for_kth)
+        print(f"  Threshold (k={k_for_kth}/{total_params}): {threshold:.6f}")
+
+        # TaLoS: mask = where(score <= threshold, 0, 1)
+        # Parameters with score <= threshold are frozen
+        # Parameters with score > threshold are kept
         frozen_params = 0
         for name in masks:
             score = sensitivity_scores[name]
-            # Parameters with score >= threshold are kept (mask = 1)
-            # Using >= instead of > to handle edge cases where many params have same score
-            new_mask = (score >= threshold).float()
+            # score > threshold -> keep (mask=1), score <= threshold -> freeze (mask=0)
+            new_mask = torch.where(score > threshold, 
+                                   torch.ones_like(score), 
+                                   torch.zeros_like(score))
             masks[name] = new_mask
             frozen_params += (new_mask == 0).sum().item()
 
