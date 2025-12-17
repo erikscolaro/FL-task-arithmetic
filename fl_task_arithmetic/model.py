@@ -125,6 +125,8 @@ class CustomDino(nn.Module):
 
     def forward(self, x: torch.Tensor):
         features = self.backbone(x)
+        # Normalize features for cosine similarity with normalized centroids
+        features = torch.nn.functional.normalize(features, p=2, dim=1)
         logits = self.classifier(features)
         return logits
 
