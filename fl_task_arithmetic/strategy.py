@@ -160,7 +160,7 @@ def get_evaluate_fn(
     def evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
         checkpoint_interval  = int(context.run_config["server-checkpoint-interval"])
         total_round = int(context.run_config["num-server-rounds"])
-        print(f"Server round: {server_round}")
+        print(f"\n=== Server Evaluation - Round {server_round} ===")
         state_dict = arrays.to_torch_state_dict()
         model.load_state_dict(state_dict=state_dict)
 
@@ -173,6 +173,8 @@ def get_evaluate_fn(
         # Perform evaluation on the model with the given arrays
         model.eval()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+        
         dataset = load_server_test_data()
 
         if dataset is not None:
@@ -180,9 +182,12 @@ def get_evaluate_fn(
                 dataset=dataset, #type: ignore
                 batch_size=context.run_config["client-batch-size"],  # type: ignore[call-operator]
             )
-            avg_loss, accuracy = test(model, testloader ,device)
-
+            avg_loss, accuracy = test(model, testloader, device)
+            
             wandb.log({"server/val_accuracy": accuracy, "server/val_loss": avg_loss, "server_round": server_round})
+            
+            # Return metrics so the framework can log them
+            return MetricRecord({"loss": avg_loss, "accuracy": accuracy})
         else:
             print("Error obtaining the test split from the federated dataset.")
 

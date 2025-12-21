@@ -95,20 +95,22 @@ def main(grid: Grid, context: Context) -> None:
         # Try to load the last model checkpoint from Wandb
         try:
             history = run_online.history(keys=["round"], pandas=False)
-            last_round = history[-1]["round"]
-            print(
-                f"I find a previous run on the cloud. I'll resume from round {last_round}."
-            )
-            load_model_from_wandb(run=run, model=global_model)
-            # updating context
-            context.run_config["server-round"] = last_round
-            context.run_config["num-server-rounds"] += last_round
-            num_rounds += last_round
-        except Exception:
+            if len(history) > 0:
+                last_round = history[-1]["round"]
+                print(
+                    f"Found previous run on cloud. Resuming from round {last_round}."
+                )
+                load_model_from_wandb(run=run, model=global_model)
+                # updating context
+                context.run_config["server-round"] = last_round
+                context.run_config["num-server-rounds"] += last_round
+                num_rounds += last_round
+            else:
+                print("No history found. Starting from scratch.")
+                save_model_to_wandb(run=run, model=global_model)
+        except Exception as e:
+            print(f"Error loading checkpoint: {e}")
             print("Starting from scratch.")
-            # Optionally, initialize with a pretrained backbone
-            # start_backbone = cast(nn.Module, torch.hub.load("facebookresearch/dino:main", "dino_vits16", pretrained=True))
-            # global_model = CustomDino(num_classes=100, backbone=start_backbone)
             save_model_to_wandb(run=run, model=global_model)
 
     # ------------------------------
