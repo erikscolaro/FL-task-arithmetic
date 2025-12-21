@@ -91,12 +91,6 @@ class CustomFedAvg(FedAvg):
                 self.weighted_by_key,
             )
 
-            if metrics is not None:
-                wandb.log({
-                    "round": server_round + self.last_round,
-                    **dict(metrics)
-                })
-
         return arrays, metrics
 
     def configure_evaluate(
@@ -144,18 +138,12 @@ class CustomFedAvg(FedAvg):
                 reply_contents,
                 self.weighted_by_key,
             )
-
-            if metrics is not None:
-                wandb.log({
-                    "round": server_round + self.last_round,
-                    **dict(metrics)
-                })
        
         return metrics
 
 
 def get_evaluate_fn(
-    run: wandb.Run, model: CustomDino, context: Context
+    run: wandb.Run, model: CustomDino, context: Context, last_round: int 
 ):
     def evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
         checkpoint_interval  = int(context.run_config["server-checkpoint-interval"])
@@ -183,11 +171,16 @@ def get_evaluate_fn(
                 batch_size=context.run_config["client-batch-size"],  # type: ignore[call-operator]
             )
             avg_loss, accuracy = test(model, testloader, device)
+
+            metrics = MetricRecord({"loss": avg_loss, "accuracy": accuracy})
             
-            wandb.log({"server/val_accuracy": accuracy, "server/val_loss": avg_loss, "server_round": server_round})
-            
+            if metrics is not None:
+                wandb.log({
+                    "round": server_round + last_round,
+                    **dict(metrics)
+                })            
             # Return metrics so the framework can log them
-            return MetricRecord({"loss": avg_loss, "accuracy": accuracy})
+            return metrics
         else:
             print("Error obtaining the test split from the federated dataset.")
 

@@ -219,7 +219,8 @@ def main(grid: Grid, context: Context) -> None:
         evaluate_fn=get_evaluate_fn(
             run,
             global_model,
-            context
+            context,
+            last_round
         ),
     )
 
