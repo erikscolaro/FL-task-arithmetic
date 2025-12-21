@@ -72,15 +72,21 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
             shuffle=True, # Randomize the order of samples after the partition.
             seed=42,
         )
-        # train split -> train + validation split
-        preprocessor = Divider(
-            divide_config={
-                "train": 1.0 - context.run_config["val-ratio-of-train"],  # type: ignore[call-operator]
-                "valid": context.run_config["val-ratio-of-train"],  # type: ignore[call-operator]
-            },
-            divide_split="train",
-            drop_remaining_splits=False,
-        )
+        
+        # Only use Divider preprocessor if val-ratio-of-train > 0
+        val_ratio = float(context.run_config["val-ratio-of-train"])  # type: ignore[call-operator]
+        preprocessor = None
+        if val_ratio > 0.0:
+            # train split -> train + validation split
+            preprocessor = Divider(
+                divide_config={
+                    "train": 1.0 - val_ratio,
+                    "valid": val_ratio,
+                },
+                divide_split="train",
+                drop_remaining_splits=False,
+            )
+        
         fds = FederatedDataset(
             dataset="uoft-cs/cifar100",
             preprocessor=preprocessor,

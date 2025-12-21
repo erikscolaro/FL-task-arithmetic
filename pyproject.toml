@@ -19,7 +19,6 @@ dependencies = [
     "torch==2.7.1",
     "torchvision==0.22.1",
     "wandb>=0.17.8",
-    "ipywidgets>=8.1.8",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -40,7 +39,7 @@ fraction-train = 0.1
 fraction-evaluate = 0.0  # 0 = NO EVAL AT CLIENT LEVEL, Fraction of clients to use for evaluation (1.0 = all available clients)
 local-epochs = 8 
 lr = 0.0001
-val-ratio-of-train = 0.0 # DISABLED NOW - percentage of CIFAR100 training split used as validation
+val-ratio-of-train = 0.01 # percentage of CIFAR100 training split used as validation
 client-test-ratio-of-partition = 0.0 # DISABLED NOW - percentage of the partition received to each client that becomes the test split
 client-batch-size = 64 # batch size for client training and evaluation
 
