@@ -1,0 +1,16 @@
+# TaLoS configuration: sparsity=0.9, calibration_rounds=2
+
+# Federated learning parameters
+num-classes-per-partition = 10
+local-epochs = 8
+fraction-train = 0.1
+fraction-evaluate = 1.0
+
+# Sparse fine-tuning with TaLoS
+use-sparse-finetuning = true
+sparsity-ratio = 0.9
+num-calibration-rounds = 2
+
+# Wandb configuration
+group = "task-arithmetic-s90-r2"
+notes = "Task Arithmetic with 90% sparsity (standard), 2 calibration rounds"

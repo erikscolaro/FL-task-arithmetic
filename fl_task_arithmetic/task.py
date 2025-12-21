@@ -68,9 +68,9 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
             num_partitions=num_partitions,
             partition_by="fine_label",
             num_classes_per_partition=context.run_config["num-classes-per-partition"], # type: ignore
-            class_assignment_mode="random",  # deterministic to comply with eventual checkpoints
+            class_assignment_mode="deterministic",
             shuffle=True, # Randomize the order of samples after the partition.
-            seed=42, #TODO: should we modify the default value?
+            seed=42,
         )
         # train split -> train + validation split
         preprocessor = Divider(

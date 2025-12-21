@@ -1,0 +1,13 @@
+# Baseline FedAvg configuration: N_c=100 (IID case), J=16 local epochs
+
+# Federated learning parameters
+num-classes-per-partition = 100
+local-epochs = 16
+fraction-train = 0.1
+
+# Disable sparse fine-tuning for baseline
+use-sparse-finetuning = false
+
+# Wandb configuration
+group = "baseline-fedavg-nc100-j16"
+notes = "Baseline FedAvg with N_c=100 classes per partition (IID), J=16 local epochs, 100 nodes, 10% participation"

@@ -29,6 +29,7 @@ def main(grid: Grid, context: Context) -> None:
     # Read Configuration from Context
     # ------------------------------
     fraction_train: float = context.run_config["fraction-train"]  # type:ignore
+    fraction_evaluate: float = context.run_config["fraction-evaluate"]  # type:ignore
     num_rounds: int = context.run_config["num-server-rounds"]  # type:ignore
     lr: float = context.run_config["lr"]  # type:ignore
 
@@ -117,7 +118,11 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Start Federated Training
     # ------------------------------
-    strategy = CustomFedAvg(fraction_train=fraction_train, last_round=last_round)
+    strategy = CustomFedAvg(
+        fraction_train=fraction_train,
+        fraction_evaluate=fraction_evaluate,
+        last_round=last_round
+    )
     result = strategy.start(
         grid=grid,
         initial_arrays=arrays,
