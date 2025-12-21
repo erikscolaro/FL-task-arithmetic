@@ -48,7 +48,7 @@ def compute_sensitivity_scores(
     batch_count = 0
 
     for batch_idx, batch in enumerate(dataloader):
-        if num_batches is not None and batch_idx >= num_batches:
+        if num_batches is not None and num_batches >= 0 and batch_idx >= num_batches:
             break
 
         if isinstance(batch, dict):
@@ -150,12 +150,14 @@ def calibrate_gradient_masks(
         # Debug: distribution of scores
         num_zeros = (all_scores == 0).sum().item()
         num_nonzeros = (all_scores > 0).sum().item()
-        print(f"  Score stats: {num_zeros} zeros ({100*num_zeros/total_params:.1f}%), "
-              f"{num_nonzeros} non-zeros ({100*num_nonzeros/total_params:.1f}%)")
-        if num_nonzeros > 0:
-            nonzero_scores = all_scores[all_scores > 0]
-            print(f"  Non-zero scores: min={nonzero_scores.min():.2e}, "
-                  f"max={nonzero_scores.max():.2e}, mean={nonzero_scores.mean():.2e}")
+        
+        # If all gradients are zero, skip freezing to avoid masking everything
+        if num_nonzeros == 0:
+            print("  Warning: all gradients are zero; skipping pruning for this round.")
+            continue
+            
+        print(f"  Non-zero scores: min={all_scores[all_scores > 0].min():.2e}, "
+              f"max={all_scores.max():.2e}, mean={all_scores[all_scores > 0].mean():.2e}")
 
         # TaLoS: k = int((1.0 - sparsity) * global_scores.numel())
         # where sparsity = fraction to KEEP
@@ -195,6 +197,8 @@ def calibrate_gradient_masks(
     final_frozen = sum((m == 0).sum().item() for m in masks.values())
     final_total = sum(m.numel() for m in masks.values())
     print(f"Final: {final_frozen}/{final_total} parameters frozen ({final_frozen/final_total:.2%})")
+    if final_frozen == 0:
+        print("Warning: no parameters were frozen; check gradients or data if sparsity was expected.")
     
     return masks
 

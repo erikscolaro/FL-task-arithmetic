@@ -151,16 +151,13 @@ def train_sparse(
     epochs,
     lr,
     device,
-    sparsity_ratio: float = 0.0,
-    num_calibration_rounds: int = 1,
-    num_batches_calibration: Optional[int] = 10,
+    masks: Optional[Dict[str, torch.Tensor]] = None,
 ):
     """
-    Train the model using sparse fine-tuning with gradient masking.
+    Train the model using sparse fine-tuning with pre-calibrated gradient masks.
     
-    Two-step sparse fine-tuning process:
-    1. Calibrate gradient masks by identifying least sensitive parameters (low gradient magnitude)
-    2. Fine-tune using SparseSGDM with the calibrated masks
+    The masks should be pre-calibrated on the server before federated training.
+    This function uses SparseSGDM with the provided masks to perform sparse fine-tuning.
     
     Args:
         net: Model to train (should be CustomDino with frozen classifier)
@@ -168,33 +165,27 @@ def train_sparse(
         epochs: Number of training epochs
         lr: Learning rate
         device: Device to train on
-        sparsity_ratio: Fraction of parameters to freeze (0.0 to 1.0)
-        num_calibration_rounds: Number of mask calibration rounds
-        num_batches_calibration: Batches to use per calibration round
+        masks: Pre-calibrated gradient masks from server (dict mapping param names to masks)
         
     Returns:
         Average training loss
     """
-    from fl_task_arithmetic.sensitivity import calibrate_gradient_masks, get_masked_parameters
+    from fl_task_arithmetic.sensitivity import get_masked_parameters
     from fl_task_arithmetic.sparseSGDM import SparseSGDM
     
     net.to(device)
     criterion = torch.nn.CrossEntropyLoss().to(device)
     
-    # Step 1: Calibrate gradient masks if sparsity > 0
-    if sparsity_ratio > 0.0:
-        print(f"\n=== Step 1: Calibrating Gradient Masks ===")
-        masks = calibrate_gradient_masks(
-            model=net,
-            dataloader=trainloader,
-            sparsity_ratio=sparsity_ratio,
-            num_calibration_rounds=num_calibration_rounds,
-            device=device,
-            num_batches_per_round=num_batches_calibration,
-        )
+    # Use pre-calibrated masks if provided
+    if masks is not None and len(masks) > 0:
+        print(f"\n=== Sparse Fine-tuning with Pre-calibrated Masks ===")
+        
+        # Move masks to CPU if needed (SparseSGDM expects CPU masks)
+        masks_cpu = {name: mask.cpu() if mask.device != torch.device('cpu') else mask 
+                     for name, mask in masks.items()}
         
         # Prepare masked parameters for SparseSGDM
-        masked_params = get_masked_parameters(net, masks)
+        masked_params = get_masked_parameters(net, masks_cpu)
         
         # Use SparseSGDM with masks
         optimizer = SparseSGDM(
@@ -204,11 +195,14 @@ def train_sparse(
             momentum=0.9,
             weight_decay=5e-4,
         )
-        print(f"\n=== Step 2: Sparse Fine-tuning with SparseSGDM ===")
+        
+        num_frozen = sum((m == 0).sum().item() for m in masks_cpu.values())
+        num_total = sum(m.numel() for m in masks_cpu.values())
+        print(f"Using masks: {num_frozen}/{num_total} params frozen ({100*num_frozen/num_total:.1f}%)")
     else:
-        # No sparsity, use standard Adam
+        # No masks provided, use standard Adam
         optimizer = torch.optim.Adam(net.parameters(), lr=lr)
-        print(f"\n=== Standard Fine-tuning (no sparsity) ===")
+        print(f"\n=== Standard Fine-tuning (no masks provided) ===")
     
     # Step 2: Fine-tune with masked gradients
     net.train()

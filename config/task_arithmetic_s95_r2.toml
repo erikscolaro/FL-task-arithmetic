@@ -4,7 +4,6 @@
 num-classes-per-partition = 10
 local-epochs = 8
 fraction-train = 0.1
-fraction-evaluate = 1.0
 
 # Sparse fine-tuning with TaLoS
 use-sparse-finetuning = true

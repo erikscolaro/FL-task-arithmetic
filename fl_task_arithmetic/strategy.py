@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Optional
+from typing import Optional, Dict
 from logging import INFO, WARNING
 
 from flwr.common import (
@@ -31,8 +31,9 @@ from torch.utils.data import DataLoader
 # we override some functions of fedavg to implement checkpointing
 # pylint: disable=too-many-instance-attributes
 class CustomFedAvg(FedAvg):
-    def __init__(self, last_round: int = 0, *args, **kwargs):
+    def __init__(self, last_round: int = 0, masks: Optional[Dict[str, torch.Tensor]] = None, *args, **kwargs):
         self.last_round = last_round
+        self.masks = masks
         super().__init__(*args, **kwargs)
 
     def configure_train(
@@ -55,10 +56,15 @@ class CustomFedAvg(FedAvg):
         # Always inject current server round
         config["server-round"] = server_round
 
-        # Construct messages
-        record = RecordDict(
-            {self.arrayrecord_key: arrays, self.configrecord_key: config}
-        )
+        # Construct messages with arrays and config
+        record_dict = {self.arrayrecord_key: arrays, self.configrecord_key: config}
+        
+        # Add masks to the record if available
+        if self.masks is not None:
+            masks_record = ArrayRecord({name: mask for name, mask in self.masks.items()})
+            record_dict["masks"] = masks_record
+        
+        record = RecordDict(record_dict)
         return self._construct_messages(record, node_ids, MessageType.TRAIN)
 
     def aggregate_train(

@@ -35,6 +35,13 @@ def train(msg: Message, context: Context):
 
     # Call the appropriate training function
     if use_sparse:
+        # Extract masks from server message if available
+        masks = None
+        if "masks" in msg.content:
+            masks_dict = msg.content["masks"].to_torch_state_dict() # type: ignore
+            masks = {name: tensor for name, tensor in masks_dict.items()}
+            print(f"[Client {partition_id}] Received {len(masks)} masks from server")
+        
         print(f"[Client {partition_id}] Using sparse fine-tuning")
         train_loss = train_sparse_fn(
             model,
@@ -42,9 +49,7 @@ def train(msg: Message, context: Context):
             context.run_config["local-epochs"],
             msg.content["config"]["lr"],
             device,
-            sparsity_ratio=context.run_config.get("sparsity-ratio", 0.0), # type: ignore
-            num_calibration_rounds=context.run_config.get("num-calibration-rounds", 1), # type: ignore
-            num_batches_calibration=context.run_config.get("num-batches-calibration", 10), # type: ignore
+            masks=masks,  # Pass pre-calibrated masks from server
         )
     else:
         train_loss = train_fn(
