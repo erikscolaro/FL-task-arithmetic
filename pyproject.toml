@@ -36,7 +36,7 @@ clientapp = "fl_task_arithmetic.client_app:app"
 [tool.flwr.app.config]
 num-server-rounds = 60
 fraction-train = 0.1
-fraction-evaluate = 0.0  # 0 = NO EVAL AT CLIENT LEVEL, Fraction of clients to use for evaluation (1.0 = all available clients)
+fraction-evaluate = 0.2  # TODO Can we just put it to 0.0?, Fraction of clients to use for evaluation (1.0 = all available clients)
 local-epochs = 8 
 lr = 0.0001
 val-ratio-of-train = 0.01 # percentage of CIFAR100 training split used as validation
