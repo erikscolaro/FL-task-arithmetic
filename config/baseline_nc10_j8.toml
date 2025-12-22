@@ -1,6 +1,7 @@
 # Baseline FedAvg configuration: N_c=10 (moderate non-IID), J=8 local epochs
 
 # Federated learning parameters
+num-server-rounds = 30
 num-classes-per-partition = 10
 local-epochs = 8
 fraction-train = 0.1
