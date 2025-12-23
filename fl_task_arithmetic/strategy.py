@@ -148,7 +148,6 @@ def get_evaluate_fn(
     def evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
         checkpoint_interval  = int(context.run_config["server-checkpoint-interval"])
         total_round = int(context.run_config["num-server-rounds"])
-        print(f"\n=== Server Evaluation - Round {server_round + last_round} ===")
         state_dict = arrays.to_torch_state_dict()
         model.load_state_dict(state_dict=state_dict)
 
