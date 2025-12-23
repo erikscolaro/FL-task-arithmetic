@@ -148,7 +148,7 @@ def get_evaluate_fn(
     def evaluate(server_round: int, arrays: ArrayRecord) -> MetricRecord:
         checkpoint_interval  = int(context.run_config["server-checkpoint-interval"])
         total_round = int(context.run_config["num-server-rounds"])
-        print(f"\n=== Server Evaluation - Round {server_round} ===")
+        print(f"\n=== Server Evaluation - Round {server_round + last_round} ===")
         state_dict = arrays.to_torch_state_dict()
         model.load_state_dict(state_dict=state_dict)
 
@@ -174,7 +174,7 @@ def get_evaluate_fn(
 
             metrics = MetricRecord({"loss": avg_loss, "accuracy": accuracy})
             
-            if metrics is not None:
+            if metrics is not None and server_round!=0:
                 wandb.log({
                     "round": server_round + last_round,
                     **dict(metrics)
