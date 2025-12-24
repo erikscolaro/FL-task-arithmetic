@@ -62,16 +62,20 @@ def compute_sensitivity_scores(
         for _ in range(R):
             model.zero_grad()
             outputs = model(images)
+            outdx = torch.distributions.Categorical(logits=outputs).sample().unsqueeze(1).detach()
+            samples = outputs.gather(1, outdx)
             
+            for idx in range(batch.size(0)):
+                    model.zero_grad()
+                    torch.autograd.backward(samples[idx], retain_graph=True)
+                    for name, param in model.named_parameters():
+                        if param.requires_grad and hasattr(param, 'grad') and param.grad is not None:
+                            sensitivity_scores[name] += torch.clone(param.grad.data.pow(2)).detach().cpu()
+
             # Standard cross-entropy with ground truth labels
+            
             loss = criterion(outputs, labels)
             loss.backward()
-
-            for name, param in model.named_parameters():
-                if param.requires_grad and param.grad is not None:
-                    # TaLoS uses grad^2 (squared gradient) as sensitivity metric
-                    sensitivity_scores[name] += param.grad.data.pow(2).detach().cpu()
-
         batch_count += 1
 
     # No need to average - we want cumulative sensitivity
