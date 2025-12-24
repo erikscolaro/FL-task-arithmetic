@@ -66,7 +66,7 @@ def main(grid: Grid, context: Context) -> None:
         entity=entity,
         project=project,
         group=group,
-        name="server",
+        name="TEST-Different-Fisher-Matrix",
         id=run_id_str,
         notes=notes,
         resume=resume,
