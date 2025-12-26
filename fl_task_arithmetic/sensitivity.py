@@ -11,7 +11,13 @@ import torch
 import torch.nn as nn
 from typing import Dict, Optional
 from torch.utils.data import DataLoader
+from torch.func import functional_call, vmap, grad
 
+
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from typing import Optional, Dict
 
 def compute_sensitivity_scores(
     model: nn.Module,
@@ -21,30 +27,43 @@ def compute_sensitivity_scores(
     num_batches: Optional[int] = None,
     R: int = 1,
 ) -> Dict[str, torch.Tensor]:
-    """
-    Compute sensitivity scores based on squared gradient magnitude.
     
-    Following TaLoS, we use grad^2 as the sensitivity metric (Fisher Information
-    approximation). This measures how much the loss changes when perturbing each
-    parameter.
-    
-    Args:
-        model: The model to compute sensitivity for
-        dataloader: DataLoader for calibration data
-        device: Device to run on
-        masks: Optional existing masks (only compute scores for active params)
-        num_batches: Limit number of batches for efficiency
-        R: Number of samples per input (TaLoS uses stochastic sampling)
-    """
+    # --- MICRO-BATCH CONFIGURATION ---
+    # Try 4. If you get OOM, go down to 2. If it holds, go up to 8.
+    MICRO_BATCH_SIZE = 4
+    # --------------------------------
+
     model.train()
     model.to(device)
+    params_all = {k: v for k, v in model.named_parameters() if v.requires_grad}
+    params_diff = {}
+    params_fixed = {}
+    
+    for k, v in params_all.items():
+        if masks is not None and k in masks and (masks[k] == 0).all():
+            params_fixed[k] = v
+        else:
+            params_diff[k] = v
+    #Add all non-trainable params to fixed
+    params_fixed.update({k: v for k, v in model.named_parameters() if not v.requires_grad})
+    buffers = {k: v for k, v in model.named_buffers()}
+    
+    sensitivity_scores = {k: torch.zeros_like(v, device='cpu') for k, v in params_diff.items()}
 
-    sensitivity_scores: Dict[str, torch.Tensor] = {}
-    for name, param in model.named_parameters():
-        if param.requires_grad:
-            sensitivity_scores[name] = torch.zeros_like(param.data, device='cpu')
+    # Stateless function for vmap
+    def compute_loss_stateless(p_diff, p_fixed, bufs, img, lbl):
+        all_params = {**p_diff, **p_fixed}
+        img = img.unsqueeze(0)
+        lbl = lbl.unsqueeze(0)
+        out = torch.func.functional_call(model, (all_params, bufs), img)
+        return torch.nn.functional.cross_entropy(out, lbl)
 
-    criterion = nn.CrossEntropyLoss()
+    # vmap vectorizes the computation
+    compute_per_sample_grads = torch.vmap(
+        torch.func.grad(compute_loss_stateless, argnums=0),
+        in_dims=(None, None, None, 0, 0)
+    )
+
     batch_count = 0
 
     for batch_idx, batch in enumerate(dataloader):
@@ -52,30 +71,50 @@ def compute_sensitivity_scores(
             break
 
         if isinstance(batch, dict):
-            images = batch["img"].to(device)
-            labels = batch["fine_label"].to(device)
+            images_full = batch["img"].to(device)
+            labels_full = batch["fine_label"].to(device)
         else:
-            images, labels = batch
-            images, labels = images.to(device), labels.to(device)
+            images_full, labels_full = batch
+            images_full, labels_full = images_full.to(device), labels_full.to(device)
 
-        # TaLoS approach: sample R times from the model's output distribution
+        # TaLoS loop (R sampling)
         for _ in range(R):
-            model.zero_grad()
-            outputs = model(images)
             
-            # Standard cross-entropy with ground truth labels
-            loss = criterion(outputs, labels)
-            loss.backward()
+            # --- MICRO-BATCHING LOOP ---
+            # We split the large batch (e.g., 32) into micro-batches (e.g., 4)
+            total_samples = images_full.shape[0]
+            
+            for i in range(0, total_samples, MICRO_BATCH_SIZE):
+                # Select the slice (chunk)
+                img_chunk = images_full[i : i + MICRO_BATCH_SIZE]
+                lbl_chunk = labels_full[i : i + MICRO_BATCH_SIZE]
+                
+                # Compute gradients with vmap ONLY on this chunk
+                # Here we only use memory for 4 images, not 32!
+                chunk_grads = compute_per_sample_grads(
+                    params_diff, params_fixed, buffers, img_chunk, lbl_chunk
+                )
 
-            for name, param in model.named_parameters():
-                if param.requires_grad and param.grad is not None:
-                    # TaLoS uses grad^2 (squared gradient) as sensitivity metric
-                    sensitivity_scores[name] += param.grad.data.pow(2).detach().cpu()
+                # Accumulate squared gradients
+                for name, g_sample in chunk_grads.items():
+                    # g_sample has shape [Micro_Batch, Params]
+                    sensitivity_scores[name] += g_sample.pow(2).sum(dim=0).detach().cpu()
+                
+                # Clean up intermediate references to free VRAM immediately
+                del chunk_grads, img_chunk, lbl_chunk
+            
+            # --- END MICRO-BATCHING ---
 
         batch_count += 1
+        
+        # Clear cache after each full batch to avoid fragmentation
+        torch.cuda.empty_cache()
 
-    # No need to average - we want cumulative sensitivity
+        if batch_count % 10 == 0:
+            print(f"  Computed sensitivity for {batch_count} batches...")
+    
     return sensitivity_scores
+
 
 
 def calibrate_gradient_masks(
