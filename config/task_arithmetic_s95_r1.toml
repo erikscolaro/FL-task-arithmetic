@@ -12,5 +12,5 @@ sparsity-ratio = 0.95
 num-calibration-rounds = 1
 
 # Wandb configuration
-group = "task-arithmetic-s95-r1"
+group = "task-arithmetic-s95-r1-V2"
 notes = "Task Arithmetic with 95% sparsity (extreme), 1 calibration round"
