@@ -221,6 +221,14 @@ def calibrate_gradient_masks(
         # Parameters with score > threshold are kept
         frozen_params = 0
         for name in masks:
+            
+            # --- FIX ---
+            if name not in sensitivity_scores:
+                # Parameter was fully frozen in previous rounds and excluded from computation.
+                # It remains frozen (mask is already all 0s).
+                frozen_params += masks[name].numel()
+                continue
+            # --- FIX ---
             score = sensitivity_scores[name]
             # score > threshold -> keep (mask=1), score <= threshold -> freeze (mask=0)
             new_mask = torch.where(score > threshold, 
