@@ -55,6 +55,7 @@ use-sparse-finetuning = true  # Enable sparse fine-tuning with gradient masking
 sparsity-ratio = 0.9  # Fraction of parameters to freeze (0.0 = no sparsity, 0.9 = freeze 90%)
 num-calibration-rounds = 5  # Number of iterative mask calibration rounds
 num-batches-calibration = -1  # Number of batches to use per calibration round (-1 = all batches, same as TaLoS)
+mask-calibration-type = 0
 
 # Weights & Biases (wandb) configuration
 entity = "aml-fl-project"

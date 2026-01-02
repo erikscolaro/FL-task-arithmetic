@@ -10,6 +10,7 @@ fraction-train = 0.1
 use-sparse-finetuning = true
 sparsity-ratio = 0.5
 num-calibration-rounds = 1
+mask-calibration-type = 0
 
 # Wandb configuration
 group = "V2-task-arithmetic-s50-r1-V2"

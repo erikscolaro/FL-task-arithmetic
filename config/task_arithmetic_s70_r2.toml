@@ -10,7 +10,8 @@ fraction-train = 0.1
 use-sparse-finetuning = true
 sparsity-ratio = 0.7
 num-calibration-rounds = 2
+mask-calibration-type = 0
 
 # Wandb configuration
-group = "task-arithmetic-s70-r2" #Davide is already running it
+group = "task-arithmetic-s70-r2"                                  #Davide is already running it
 notes = "Task Arithmetic with 70% sparsity, 2 calibration rounds"

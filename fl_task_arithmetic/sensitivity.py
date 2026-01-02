@@ -250,7 +250,7 @@ def calibrate_gradient_masks(
     return masks
 
 
-def calibrate_gradient_masks_with_most_sensitive_weights(
+def calibrate_gradient_masks_most_sensitive(
     model: nn.Module,
     dataloader: DataLoader,
     sparsity_ratio: float,

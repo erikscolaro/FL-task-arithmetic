@@ -20,6 +20,7 @@ def train(msg: Message, context: Context):
 
     # Determine if we should use sparse fine-tuning
     use_sparse = context.run_config.get("use-sparse-finetuning", False)
+    mask_calibration_type = context.run_config.get("mask-calibration-type", 0)
     
     # Load the model and initialize it with the received weights
     model = CustomDino(num_classes=100)
