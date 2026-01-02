@@ -136,7 +136,7 @@ def main(grid: Grid, context: Context) -> None:
         print(f"Sparsity ratio: {sparsity_ratio}")
         print(f"Calibration rounds: {num_calibration_rounds}")
         print(f"Batches per round: {num_batches_calibration}")
-        
+        print(f"Mask calibration type: {mask_calibration_type}")
         # Try to load masks from wandb if resuming
         masks_artifact_name = f"masks-{group}-{run_id}"
         if resume != "never" and last_round > 0:
