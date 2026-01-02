@@ -8,7 +8,7 @@ from flwr.serverapp.strategy import FedAvg
 import wandb
 from fl_task_arithmetic.strategy import CustomFedAvg, get_evaluate_fn
 from fl_task_arithmetic.task import CustomDino, load_server_test_data
-from fl_task_arithmetic.sensitivity import calibrate_gradient_masks
+from fl_task_arithmetic.sensitivity import calibrate_gradient_masks, calibrate_gradient_masks_most_sensitive, calibrate_gradient_masks_with_randomness
 from datetime import datetime
 import os
 from utilities.wandb_utils import load_model_from_wandb, save_model_to_wandb
@@ -116,7 +116,15 @@ def main(grid: Grid, context: Context) -> None:
     # ------------------------------
     # Calibrate Gradient Masks (if using sparse fine-tuning)
     # ------------------------------
+    # Mask Calibration Type:
+    # 0 = Least Sensitive (Gradient Magnitude)
+    # 1 = Most Sensitive (Gradient Magnitude)
+    # 2 = Random
+    # 3 = Lowest Magnitude
+    # 4 = Highest Magnitude 
+
     use_sparse = context.run_config.get("use-sparse-finetuning", False)
+    mask_calibration_type = context.run_config.get("mask-calibration-type", 0)
     masks: Optional[Dict[str, torch.Tensor]] = None
     
     if use_sparse:
@@ -161,14 +169,36 @@ def main(grid: Grid, context: Context) -> None:
                 global_model.unfreeze_backbone()
                 
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-                masks = calibrate_gradient_masks(
-                    model=global_model,
-                    dataloader=calibration_loader,
-                    sparsity_ratio=sparsity_ratio, # type: ignore
-                    num_calibration_rounds=num_calibration_rounds, # type: ignore
-                    device=device,
-                    num_batches_per_round=num_batches_calibration, # type: ignore
-                )
+
+                if mask_calibration_type == 0:
+                    masks = calibrate_gradient_masks(
+                        model=global_model,
+                        dataloader=calibration_loader,
+                        sparsity_ratio=sparsity_ratio, # type: ignore
+                        num_calibration_rounds=num_calibration_rounds, # type: ignore
+                        device=device,
+                        num_batches_per_round=num_batches_calibration, # type: ignore
+                    )
+                elif mask_calibration_type == 1:
+                    masks = calibrate_gradient_masks_most_sensitive(
+                        model=global_model,
+                        dataloader=calibration_loader,
+                        sparsity_ratio=sparsity_ratio, # type: ignore
+                        num_calibration_rounds=num_calibration_rounds, # type: ignore
+                        device=device,
+                        num_batches_per_round=num_batches_calibration, # type: ignore
+                    )
+                elif mask_calibration_type == 2:
+                    masks = calibrate_gradient_masks_with_randomness(
+                        model=global_model,
+                        sparsity_ratio=sparsity_ratio, # type: ignore
+                        num_calibration_rounds=num_calibration_rounds, # type: ignore
+                    )
+                elif mask_calibration_type == 3:
+                    raise NotImplementedError("Lowest Magnitude calibration not implemented yet.")
+                elif mask_calibration_type == 4:
+                    raise NotImplementedError("Highest Magnitude calibration not implemented yet.")
+
                 print(f"✓ Masks calibrated successfully on server!")
                 
                 # Save masks to wandb
