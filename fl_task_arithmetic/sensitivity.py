@@ -356,12 +356,10 @@ def calibrate_gradient_masks_with_most_sensitive_weights(
 
 def calibrate_gradient_masks_with_randomness(
     model: nn.Module,
-    sparsity_ratio: float,
-    num_calibration_rounds: int
+    sparsity_ratio: float
 ) -> Dict[str, torch.Tensor]:
     assert 0.0 <= sparsity_ratio < 1.0, "sparsity_ratio must be in [0, 1)"
     keep_ratio = 1.0 - sparsity_ratio
-    print(f"Starting TaLoS-style mask calibration with {num_calibration_rounds} rounds...")
     print(f"Final sparsity: {sparsity_ratio:.2%} frozen, {keep_ratio:.2%} active")
 
     # Initialize all masks to 1 (all parameters active)
@@ -386,6 +384,100 @@ def calibrate_gradient_masks_with_randomness(
         numel = param.numel()
         masks[name] = global_mask[offset : offset + numel].view_as(param).clone()
         offset += numel
+
+
+    print("\nMask most sensitive calibration complete!")
+    final_frozen = sum((m == 0).sum().item() for m in masks.values())
+    final_total = sum(m.numel() for m in masks.values())
+    print(f"Final: {final_frozen}/{final_total} parameters frozen ({final_frozen/final_total:.2%})")
+    if final_frozen == 0:
+        print("Warning: no parameters were frozen; check gradients or data if sparsity was expected.")
+    return masks
+
+
+
+def calibrate_gradient_masks_with_lowest_magnitudes(
+    model: nn.Module,
+    sparsity_ratio: float,
+) -> Dict[str, torch.Tensor]:
+    assert 0.0 <= sparsity_ratio < 1.0, "sparsity_ratio must be in [0, 1)"
+    keep_ratio = 1.0 - sparsity_ratio
+    print(f"Final sparsity: {sparsity_ratio:.2%} frozen, {keep_ratio:.2%} active")
+
+    # Initialize all masks to 1 (all parameters active)
+    masks: Dict[str, torch.Tensor] = {}
+    total_params = 0
+    param_infos = []
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            param_infos.append((name, param))
+            total_params += param.numel()
+
+    num_zero = int(total_params * sparsity_ratio)
+    
+    all_magnitudes = torch.cat([
+        param.detach().abs().reshape(-1).cpu()
+        for _, param in param_infos
+    ])
+
+    if num_zero > 0:
+        threshold, _ = torch.kthvalue(all_magnitudes, num_zero)
+    else:
+        threshold = -float("inf")
+
+    # ones for params with highest magnitude
+    masks: Dict[str, torch.Tensor] = {}
+    for name, param in param_infos:
+        mask = (param.detach().abs() > threshold).float()
+        masks[name] = mask
+
+
+    print("\nMask most sensitive calibration complete!")
+    final_frozen = sum((m == 0).sum().item() for m in masks.values())
+    final_total = sum(m.numel() for m in masks.values())
+    print(f"Final: {final_frozen}/{final_total} parameters frozen ({final_frozen/final_total:.2%})")
+    if final_frozen == 0:
+        print("Warning: no parameters were frozen; check gradients or data if sparsity was expected.")
+    return masks
+
+
+def calibrate_gradient_masks_with_highest_magnitudes(
+    model: nn.Module,
+    sparsity_ratio: float,
+) -> Dict[str, torch.Tensor]:
+    assert 0.0 <= sparsity_ratio < 1.0, "sparsity_ratio must be in [0, 1)"
+    keep_ratio = 1.0 - sparsity_ratio
+    print(f"Final sparsity: {sparsity_ratio:.2%} frozen, {keep_ratio:.2%} active")
+
+    # Initialize all masks to 1 (all parameters active)
+    masks: Dict[str, torch.Tensor] = {}
+    total_params = 0
+    param_infos = []
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            param_infos.append((name, param))
+            total_params += param.numel()
+
+    num_zero = int(total_params * (1 - sparsity_ratio))
+
+    all_magnitudes = torch.cat([
+        param.detach().abs().reshape(-1).cpu()
+        for _, param in param_infos
+    ])
+
+    if num_zero > 0:
+        threshold, _ = torch.kthvalue(all_magnitudes, num_zero)
+    else:
+        threshold = -float("inf")
+
+    # ones for params with lowest magnitude
+
+    masks: Dict[str, torch.Tensor] = {}
+    for name, param in param_infos:
+        mask = (param.detach().abs() < threshold).float()
+        masks[name] = mask
 
 
     print("\nMask most sensitive calibration complete!")

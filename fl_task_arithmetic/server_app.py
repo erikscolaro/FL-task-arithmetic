@@ -8,7 +8,7 @@ from flwr.serverapp.strategy import FedAvg
 import wandb
 from fl_task_arithmetic.strategy import CustomFedAvg, get_evaluate_fn
 from fl_task_arithmetic.task import CustomDino, load_server_test_data
-from fl_task_arithmetic.sensitivity import calibrate_gradient_masks, calibrate_gradient_masks_most_sensitive, calibrate_gradient_masks_with_randomness
+from fl_task_arithmetic.sensitivity import calibrate_gradient_masks, calibrate_gradient_masks_most_sensitive, calibrate_gradient_masks_with_randomness, calibrate_gradient_masks_with_lowest_magnitudes, calibrate_gradient_masks_with_highest_magnitudes
 from datetime import datetime
 import os
 from utilities.wandb_utils import load_model_from_wandb, save_model_to_wandb
@@ -192,12 +192,17 @@ def main(grid: Grid, context: Context) -> None:
                     masks = calibrate_gradient_masks_with_randomness(
                         model=global_model,
                         sparsity_ratio=sparsity_ratio, # type: ignore
-                        num_calibration_rounds=num_calibration_rounds, # type: ignore
                     )
                 elif mask_calibration_type == 3:
-                    raise NotImplementedError("Lowest Magnitude calibration not implemented yet.")
+                    masks = calibrate_gradient_masks_with_lowest_magnitudes(
+                        model=global_model,
+                        sparsity_ratio=sparsity_ratio, # type: ignore
+                    )
                 elif mask_calibration_type == 4:
-                    raise NotImplementedError("Highest Magnitude calibration not implemented yet.")
+                    masks = calibrate_gradient_masks_with_highest_magnitudes(
+                        model=global_model,
+                        sparsity_ratio=sparsity_ratio, # type: ignore
+                    )
 
                 print(f"✓ Masks calibrated successfully on server!")
                 
