@@ -8,6 +8,7 @@ fraction-train = 0.1
 
 # Disable sparse fine-tuning for baseline
 use-sparse-finetuning = false
+mask-calibration-type = 0
 
 # Wandb configuration
 group = "baseline-fedavg-nc1-j16"

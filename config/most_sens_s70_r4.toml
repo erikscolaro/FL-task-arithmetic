@@ -1,0 +1,17 @@
+# TaLoS configuration: sparsity=0.95, calibration_rounds=8
+
+# Federated learning parameters
+num-server-rounds = 30
+num-classes-per-partition = 10
+local-epochs = 8
+fraction-train = 0.1
+
+# Sparse fine-tuning with TaLoS
+use-sparse-finetuning = true
+sparsity-ratio = 0.70
+mask-calibration-type = 1
+num-calibration-rounds = 4
+
+# Wandb configuration
+group = "most-sensitive-s70-r4"
+notes = "Most sensitive masking with 70% sparsity, 4 calibration rounds"
