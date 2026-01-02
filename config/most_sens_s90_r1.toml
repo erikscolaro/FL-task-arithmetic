@@ -10,7 +10,8 @@ fraction-train = 0.1
 use-sparse-finetuning = true
 sparsity-ratio = 0.90
 mask-calibration-type = 1
+num-calibration-rounds = 1
 
 # Wandb configuration
-group = "most-sensitive-s90"
-notes = "Most sensitive masking with 90% sparsity"
+group = "most-sensitive-s90-r1"
+notes = "Most sensitive masking with 90% sparsity, 1 calibration round"
