@@ -12,5 +12,5 @@ sparsity-ratio = 0.90
 mask-calibration-type = 4
 
 # Wandb configuration
-group = "highest-magnitude-s90"
+group = "highest-magnitude-s90-RUN2"
 notes = "Highest magnitude masking with 90% sparsity"
