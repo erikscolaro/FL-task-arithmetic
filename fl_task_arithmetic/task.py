@@ -70,7 +70,7 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
             num_classes_per_partition=context.run_config["num-classes-per-partition"], # type: ignore
             class_assignment_mode="deterministic",
             shuffle=True, # Randomize the order of samples after the partition.
-            seed=42,
+            seed=54,
         )
         
         # Only use Divider preprocessor if val-ratio-of-train > 0
