@@ -13,5 +13,5 @@ mask-calibration-type = 1
 num-calibration-rounds = 2
 
 # Wandb configuration
-group = "most-sensitive-s50-r2-RUN2"
+group = "most-sensitive-s50-r2-RUN3"
 notes = "Most sensitive masking with 50% sparsity, 2 calibration rounds"
