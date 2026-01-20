@@ -230,8 +230,8 @@ def train_sparse(
         avg_epoch_loss = epoch_loss / len(trainloader)
         running_loss += avg_epoch_loss
         
-        if (epoch + 1) % max(1, epochs // 5) == 0:
-            print(f"  Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}")
+        # if (epoch + 1) % max(1, epochs // 5) == 0:
+        #     print(f"  Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}")
     
     avg_trainloss = running_loss / epochs
     return avg_trainloss
