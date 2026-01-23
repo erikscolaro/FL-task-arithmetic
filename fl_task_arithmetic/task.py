@@ -6,7 +6,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from flwr_datasets import FederatedDataset
 from flwr_datasets.partitioner import PathologicalPartitioner
-from flwr_datasets.preprocessor import Divider
 from flwr.app import Context
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Normalize, ToTensor, Resize, CenterCrop
@@ -39,26 +38,20 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
     CIFAR100 initially has the following splits:
         {"train": 50k images, "test": 10k images}.
 
-    We further split the training set according to the value of 
-    'val-ratio-of-train' defined in pyproject.toml. For example, if 
-    val-ratio-of-train = 0.1, the resulting splits are:
-        {"train": 45k images, "val": 5k images, "test": 10k images}.
-
-    The training split is then partitioned among clients using PathologicalPartitioner,
+    The training split is partitioned among clients using PathologicalPartitioner,
     that takes from the toml a parameter called 'num-classes-per-partition'. 
     If this number is equal to the number of classes in the dataset, the partitioning is IID.
     Otherwise, the partitions are non-IID and in the extreme case (=1) each partition has samples
-    from only one class (extreme non-IID)
+    from only one class (extreme non-IID).
 
     Each client receives a partition. For instance, with 10 clients, 
-    each receives 45k / 10 = 4.5k images. From the client's point of 
-    view, this is a local dataset that has not been split yet.
+    each receives 50k / 10 = 5k images from the training split.
 
     We further split the client's partition using 
     'client-test-ratio-of-partition', which defines the percentage 
     of images used as the test set. For example, if this value is 0.2, 
     the client's partition is split as follows:
-        {"train": 3.4k images, "test": 900 images}.
+        {"train": 4k images, "test": 1k images}.
     """
 
     # Only initialize `FederatedDataset` once
@@ -73,23 +66,8 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
             seed=54,
         )
         
-        # Only use Divider preprocessor if val-ratio-of-train > 0
-        val_ratio = float(context.run_config["val-ratio-of-train"])  # type: ignore[call-operator]
-        preprocessor = None
-        if val_ratio > 0.0:
-            # train split -> train + validation split
-            preprocessor = Divider(
-                divide_config={
-                    "train": 1.0 - val_ratio,
-                    "valid": val_ratio,
-                },
-                divide_split="train",
-                drop_remaining_splits=False,
-            )
-        
         fds = FederatedDataset(
             dataset="uoft-cs/cifar100",
-            preprocessor=preprocessor,
             partitioners={"train": partitioner},
         )
     partition = fds.load_partition(partition_id)
