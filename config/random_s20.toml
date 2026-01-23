@@ -8,7 +8,7 @@ fraction-train = 0.1
 
 # Sparse fine-tuning with TaLoS
 use-sparse-finetuning = true
-sparsity-ratio = 0.30
+sparsity-ratio = 0.20
 mask-calibration-type = 2
 
 # Wandb configuration
