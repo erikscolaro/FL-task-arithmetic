@@ -160,6 +160,7 @@ def main(grid: Grid, context: Context) -> None:
             if calibration_dataset is not None:
                 calibration_loader = DataLoader(
                     dataset=calibration_dataset,  # type: ignore
+                    num_workers=2,
                     batch_size=context.run_config["client-batch-size"],  # type: ignore
                     shuffle=True,
                 )

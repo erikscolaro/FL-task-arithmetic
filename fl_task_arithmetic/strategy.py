@@ -167,6 +167,7 @@ def get_evaluate_fn(
         if dataset is not None:
             testloader = DataLoader(
                 dataset=dataset, #type: ignore
+                num_workers=2,
                 batch_size=context.run_config["client-batch-size"],  # type: ignore[call-operator]
             )
             avg_loss, accuracy = test(model, testloader, device)

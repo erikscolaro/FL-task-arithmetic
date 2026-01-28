@@ -77,11 +77,13 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
     partition_splits = partition_splits.with_transform(apply_transforms)
     trainloader = DataLoader(
         partition_splits["train"],  # type: ignore[call-operator]
+        num_workers=2,
         batch_size=context.run_config["client-batch-size"],  # type: ignore[call-operator]
         shuffle=True,
     )
     testloader = DataLoader(
-        partition_splits["test"],  # type: ignore[call-operator]
+        partition_splits["test"],  # type: ignore[call-operator],
+        num_workers=2,
         batch_size=context.run_config["client-batch-size"],  # type: ignore[call-operator]
     )
     return trainloader, testloader
