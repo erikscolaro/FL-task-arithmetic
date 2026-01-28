@@ -103,8 +103,8 @@ def main(grid: Grid, context: Context) -> None:
                 load_model_from_wandb(run=run, model=global_model)
                 # updating context
                 context.run_config["server-round"] = last_round
-                context.run_config["num-server-rounds"] += last_round
-                num_rounds += last_round
+                context.run_config["num-server-rounds"] -= last_round
+                num_rounds -= last_round
             else:
                 print("No history found. Starting from scratch.")
                 save_model_to_wandb(run=run, model=global_model)
@@ -250,7 +250,7 @@ def main(grid: Grid, context: Context) -> None:
         grid=grid,
         initial_arrays=arrays,
         train_config=ConfigRecord({"lr": lr}),
-        num_rounds=num_rounds - last_round,
+        num_rounds=num_rounds,
         evaluate_fn=get_evaluate_fn(
             run,
             global_model,

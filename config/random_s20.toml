@@ -8,9 +8,9 @@ fraction-train = 0.1
 
 # Sparse fine-tuning with TaLoS
 use-sparse-finetuning = true
-sparsity-ratio = 0.50
-mask-calibration-type = 3
+sparsity-ratio = 0.20
+mask-calibration-type = 2
 
 # Wandb configuration
-group = "lowest-magnitude-s50-RUN3"
-notes = "Lowest magnitude masking with 50% sparsity"
+group = "random-masking-s20"
+notes = "Random masking with 20% sparsity"

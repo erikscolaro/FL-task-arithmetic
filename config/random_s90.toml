@@ -12,5 +12,5 @@ sparsity-ratio = 0.90
 mask-calibration-type = 2
 
 # Wandb configuration
-group = "random-masking-s90-RUN2"
+group = "random-masking-s90-RUN3"
 notes = "Random masking with 90% sparsity"
