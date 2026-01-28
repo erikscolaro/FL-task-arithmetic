@@ -23,7 +23,7 @@ from flwr.serverapp.strategy.strategy_utils import (
 from flwr_datasets import FederatedDataset
 import wandb
 
-from fl_task_arithmetic.task import CustomDino, load_server_test_data, test
+from fl_task_arithmetic.task import CustomDino, load_server_data, test
 from utilities.wandb_utils import save_model_to_wandb
 import torch
 from torch.utils.data import DataLoader
@@ -162,7 +162,7 @@ def get_evaluate_fn(
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         model.to(device)
         
-        dataset = load_server_test_data()
+        dataset = load_server_data(split="test")
 
         if dataset is not None:
             testloader = DataLoader(

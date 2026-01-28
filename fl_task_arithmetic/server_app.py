@@ -7,7 +7,7 @@ from flwr.serverapp import Grid, ServerApp
 from flwr.serverapp.strategy import FedAvg
 import wandb
 from fl_task_arithmetic.strategy import CustomFedAvg, get_evaluate_fn
-from fl_task_arithmetic.task import CustomDino, load_server_test_data
+from fl_task_arithmetic.task import CustomDino, load_server_data
 from fl_task_arithmetic.sensitivity import calibrate_gradient_masks, calibrate_gradient_masks_most_sensitive, calibrate_gradient_masks_with_randomness, calibrate_gradient_masks_with_lowest_magnitudes, calibrate_gradient_masks_with_highest_magnitudes
 from datetime import datetime
 import os
@@ -156,7 +156,7 @@ def main(grid: Grid, context: Context) -> None:
         
         # Calibrate masks if not loaded from wandb
         if masks is None:
-            calibration_dataset = load_server_test_data()
+            calibration_dataset = load_server_data(split="train")
             if calibration_dataset is not None:
                 calibration_loader = DataLoader(
                     dataset=calibration_dataset,  # type: ignore

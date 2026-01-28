@@ -87,7 +87,7 @@ def load_data(partition_id: int, num_partitions: int, context: Context):
     return trainloader, testloader
 
 
-def load_server_test_data():
+def load_server_data(split: str = "test"):
     """
     Load the centralized test dataset for server-side evaluation.
     
@@ -99,7 +99,7 @@ def load_server_test_data():
     from datasets import load_dataset
     
     # Load CIFAR-100 test split directly (not partitioned)
-    dataset = load_dataset("uoft-cs/cifar100", split="test")
+    dataset = load_dataset("uoft-cs/cifar100", split=split)
     
     # Apply DINO transforms using set_transform (applies on-the-fly)
     def apply_transforms(batch):
