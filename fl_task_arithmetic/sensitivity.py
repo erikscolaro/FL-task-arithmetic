@@ -159,7 +159,7 @@ def calibrate_gradient_masks(
     keep_ratio = 1.0 - sparsity_ratio
 
     ### DEEP COPY OF THE MODEL
-    model_deep_copy = copy.deepcopy(model)
+    model_deep_copy = copy.deepcopy(model).to(device=device)
 
     print(
         f"Starting TaLoS-style mask calibration with {num_calibration_rounds} rounds..."
@@ -170,7 +170,7 @@ def calibrate_gradient_masks(
     masks: Dict[str, torch.Tensor] = {}
     for name, param in model_deep_copy.named_parameters():
         if param.requires_grad:
-            masks[name] = torch.ones_like(param.data, device="cpu")
+            masks[name] = torch.ones_like(param.data, device=device)
 
     for round_idx in range(num_calibration_rounds):
         # TaLoS progressive sparsity: sparse = keep_ratio^((round+1)/num_rounds)
@@ -301,7 +301,7 @@ def calibrate_gradient_masks_most_sensitive(
     masks: Dict[str, torch.Tensor] = {}
     for name, param in model.named_parameters():
         if param.requires_grad:
-            masks[name] = torch.ones_like(param.data, device="cpu")
+            masks[name] = torch.ones_like(param.data, device=device)
 
     for round_idx in range(num_calibration_rounds):
         # TaLoS progressive sparsity: sparse = keep_ratio^((round+1)/num_rounds)
