@@ -374,7 +374,7 @@ def calibrate_gradient_masks_most_sensitive(
             score = sensitivity_scores[name]
             # THIS IS WHAT'S
             new_mask = torch.where(
-                score < threshold, torch.ones_like(score), torch.zeros_like(score)
+                score < threshold, torch.zeros_like(score), torch.ones_like(score)
             )
             masks[name] = new_mask
             frozen_params += (new_mask == 0).sum().item()
