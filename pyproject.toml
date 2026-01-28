@@ -51,7 +51,7 @@ clientapp = "fl_task_arithmetic.client_app:app"
 num-server-rounds = 60                  # Number of federated learning rounds
 fraction-train = 0.1                    # Fraction of clients selected for training each round
 fraction-evaluate = 0.2                 # Fraction of clients selected for evaluation each round
-server-checkpoint-interval = 2          # Save server model checkpoint every N rounds
+server-checkpoint-interval = 1          # Save server model checkpoint every N rounds
 
 # --- Client Training Configuration ---
 local-epochs = 8                        # Number of local training epochs per round
@@ -78,7 +78,7 @@ sparsity-ratio = 0.9                    # Fraction of parameters to freeze durin
                                         # - 0.95: 95% frozen (more aggressive sparsity)
 
 num-calibration-rounds = 5              # Number of iterative rounds for mask calibration
-num-batches-calibration = -1            # Batches per calibration round (-1 = use all batches)
+num-batches-calibration = 150            # Batches per calibration round (-1 = use all batches)
 mask-calibration-type = 0               # Type of mask calibration strategy
                                         # - 0: Task arithmetic based calibration
                                         # - 1: Most sensitive parameters

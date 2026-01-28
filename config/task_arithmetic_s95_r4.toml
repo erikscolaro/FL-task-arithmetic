@@ -13,5 +13,5 @@ num-calibration-rounds = 4
 mask-calibration-type = 0
 
 # Wandb configuration
-group = "task-arithmetic-s95-r4-V2"
+group = "task-arithmetic-s95-r4-fixed"
 notes = "Task Arithmetic with 95% sparsity (extreme), 4 calibration rounds (standard)"
