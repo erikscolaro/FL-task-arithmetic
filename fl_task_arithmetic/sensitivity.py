@@ -247,13 +247,11 @@ def calibrate_gradient_masks(
         frozen_params = 0
         for name in masks:
 
-            # --- FIX ---
             if name not in sensitivity_scores:
                 # Parameter was fully frozen in previous rounds and excluded from computation.
                 # It remains frozen (mask is already all 0s).
                 frozen_params += masks[name].numel()
                 continue
-            # --- FIX ---
             score = sensitivity_scores[name]
             # score > threshold -> freeze (0)
             new_mask = torch.where(
@@ -364,13 +362,11 @@ def calibrate_gradient_masks_most_sensitive(
         frozen_params = 0
         for name in masks:
 
-            # --- FIX ---
             if name not in sensitivity_scores:
                 # Parameter was fully frozen in previous rounds and excluded from computation.
                 # It remains frozen (mask is already all 0s).
                 frozen_params += masks[name].numel()
                 continue
-            # --- FIX ---
             score = sensitivity_scores[name]
             # THIS IS WHAT'S
             new_mask = torch.where(
@@ -427,7 +423,7 @@ def calibrate_gradient_masks_with_randomness(
         masks[name] = global_mask[offset : offset + numel].view_as(param).clone()
         offset += numel
 
-    print("\nMask most sensitive calibration complete!")
+    print("\nMask random calibration complete!")
     final_frozen = sum((m == 0).sum().item() for m in masks.values())
     final_total = sum(m.numel() for m in masks.values())
     print(
@@ -475,7 +471,7 @@ def calibrate_gradient_masks_with_lowest_magnitudes(
         mask = (param.detach().abs() > threshold).float()
         masks[name] = mask
 
-    print("\nMask most sensitive calibration complete!")
+    print("\nMask lowest magnitude calibration complete!")
     final_frozen = sum((m == 0).sum().item() for m in masks.values())
     final_total = sum(m.numel() for m in masks.values())
     print(
@@ -524,7 +520,7 @@ def calibrate_gradient_masks_with_highest_magnitudes(
         mask = (param.detach().abs() < threshold).float()
         masks[name] = mask
 
-    print("\nMask most sensitive calibration complete!")
+    print("\nMask highest magnitude calibration complete!")
     final_frozen = sum((m == 0).sum().item() for m in masks.values())
     final_total = sum(m.numel() for m in masks.values())
     print(
