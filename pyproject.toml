@@ -22,11 +22,12 @@ description = "Federated Learning with Task Arithmetic and Sparse Fine-tuning"
 license = "Apache-2.0"
 
 dependencies = [
-    "flwr[simulation]>=1.23.0",         # Flower federated learning framework
-    "flwr-datasets[vision]>=0.5.0",     # Flower datasets with vision utilities
-    "torch==2.7.1",                     # PyTorch deep learning framework
-    "torchvision==0.22.1",              # PyTorch vision utilities
-    "wandb>=0.17.8",                    # Weights & Biases for experiment tracking
+    "flwr[simulation]>=1.23.0", # Flower federated learning framework
+    "flwr-datasets[vision]>=0.5.0", # Flower datasets with vision utilities
+    "torch==2.7.1", # PyTorch deep learning framework
+    "torchvision==0.22.1", # PyTorch vision utilities
+    "wandb>=0.17.8", # Weights & Biases for experiment tracking
+    "ipykernel>=7.1.0",
 ]
 
 [tool.hatch.build.targets.wheel]
