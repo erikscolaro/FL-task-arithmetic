@@ -287,7 +287,14 @@ def calibrate_gradient_masks_most_sensitive(
     num_batches_per_round: Optional[int] = None,
 ) -> Dict[str, torch.Tensor]:
     assert 0.0 <= sparsity_ratio < 1.0, "sparsity_ratio must be in [0, 1)"
+
+    # In TaLoS, sparsity is defined as "fraction to KEEP", we define it as "fraction to FREEZE"
+    # So we need to convert: keep_ratio = 1 - sparsity_ratio
     keep_ratio = 1.0 - sparsity_ratio
+
+    ### DEEP COPY OF THE MODEL
+    model_deep_copy = copy.deepcopy(model).to(device=device)
+
     print(
         f"Starting TaLoS-style mask calibration with {num_calibration_rounds} rounds..."
     )
@@ -295,7 +302,7 @@ def calibrate_gradient_masks_most_sensitive(
 
     # Initialize all masks to 1 (all parameters active)
     masks: Dict[str, torch.Tensor] = {}
-    for name, param in model.named_parameters():
+    for name, param in model_deep_copy.named_parameters():
         if param.requires_grad:
             masks[name] = torch.ones_like(param.data, device=device)
 
@@ -308,9 +315,18 @@ def calibrate_gradient_masks_most_sensitive(
         print(f"\nCalibration round {round_idx + 1}/{num_calibration_rounds}")
         print(f"  Target: keep {round_keep_ratio:.2%}, freeze {round_sparsity:.2%}")
 
+        ### Apply mask to model_deep_copy: set masked parameters to 0.01
+        for name, param in model_deep_copy.named_parameters():
+            if name in masks and param.requires_grad:
+                mask = masks[name].to(device)
+                with torch.no_grad():
+                    param.data = torch.where(
+                        mask == 0, torch.full_like(param.data, 0.01), param.data
+                    )
+
         # Compute sensitivity scores (grad^2)
         sensitivity_scores = compute_sensitivity_scores(
-            model=model,
+            model=model_deep_copy,
             dataloader=dataloader,
             device=device,
             masks=masks,
@@ -350,23 +366,23 @@ def calibrate_gradient_masks_most_sensitive(
             print("  Warning: k < 1, skipping round")
             continue
 
-        k = max(1, min(k, total_params))
+        # TaLoS uses kthvalue to find threshold
+        # k-th smallest value = threshold below which we freeze
+        # But we want top-k largest, so we use (total - k + 1)-th smallest
+        k_for_kth = total_params - k + 1
+        k_for_kth = max(1, min(k_for_kth, total_params))
 
-        threshold, _ = torch.kthvalue(all_scores, k)
-        print(f"  Threshold (k={k}/{total_params}): {threshold:.6f}")
+        threshold, _ = torch.kthvalue(all_scores, k_for_kth)
+        print(f"  Threshold (k={k_for_kth}/{total_params}): {threshold:.6f}")
 
-        # Parameters with score >= threshold are frozen
-        # Parameters with score < threshold are kept
+
         frozen_params = 0
         for name in masks:
 
             if name not in sensitivity_scores:
-                # Parameter was fully frozen in previous rounds and excluded from computation.
-                # It remains frozen (mask is already all 0s).
                 frozen_params += masks[name].numel()
                 continue
             score = sensitivity_scores[name]
-            # THIS IS WHAT'S
             new_mask = torch.where(
                 score < threshold, torch.zeros_like(score), torch.ones_like(score)
             )
@@ -388,6 +404,8 @@ def calibrate_gradient_masks_most_sensitive(
         print(
             "Warning: no parameters were frozen; check gradients or data if sparsity was expected."
         )
+
+    del model_deep_copy
     return masks
 
 

@@ -10,8 +10,8 @@ fraction-train = 0.1
 use-sparse-finetuning = true
 sparsity-ratio = 0.70
 mask-calibration-type = 1
-num-calibration-rounds = 4
+num-calibration-rounds = 2
 
 # Wandb configuration
-group = "most-sensitive-s70-r4-RUN3-FIX-MASK"
-notes = "Most sensitive masking with 70% sparsity, 4 calibration rounds"
+group = "most-sensitive-s70-r2-FIX-MASK-RUN2"
+notes = "Most sensitive masking with 70% sparsity, 2 calibration rounds"
