@@ -241,9 +241,7 @@ def calibrate_gradient_masks(
         threshold, _ = torch.kthvalue(all_scores, k_for_kth)
         print(f"  Threshold (k={k_for_kth}/{total_params}): {threshold:.6f}")
 
-        # TaLoS: mask = where(score <= threshold, 0, 1)
-        # Parameters with score <= threshold are frozen
-        # Parameters with score > threshold are kept
+
         frozen_params = 0
         for name in masks:
 
