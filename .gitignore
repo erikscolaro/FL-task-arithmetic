@@ -179,3 +179,4 @@ wandb/
 artifacts/
 **/*.pth
 !utilities/trained/nearest_centroid_classifier.pth
+data/
